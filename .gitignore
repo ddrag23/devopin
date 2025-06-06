@@ -1,0 +1,62 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VS Code settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# mypy, pytest, coverage, and profiling
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Logs
+*.log
+
+# SQLite or other DBs
+*.sqlite3
+*.db
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Compiled UI or frontend (optional if you use them)
+dist/
+build/
+*.egg-info/
+
+# Ignore specific files or folders in your structure
+app/__pycache__/
+agents/__pycache__/
+app/*.pyc
+agents/*.pyc
+*.db
+.env
+.nicegui
