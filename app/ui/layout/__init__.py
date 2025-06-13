@@ -63,17 +63,17 @@ def layout():
             # Dashboard - Active state
             for item in sidebar_menu:
                 with ui.row().classes(
-                    f"items-center gap-3 p-3 mx-2 rounded-lg w-full text-white cursor-pointer {'bg-gray-800' if current_path == item['path'] else ''}"
+                    f"items-center gap-3 p-3 mx-2 rounded-lg w-full text-white cursor-pointer {'bg-gray-800' if current_path.startswith(item["path"]) else ''}"
                 ):
                     ui.icon(item.get("icon", "home"), size="sm").classes(
                         "text-white"
-                        if current_path == item["path"]
+                        if current_path.startswith(item["path"])
                         else "text-gray-600"
                     )
                     ui.link(
                         item.get("label", "Dashbooard"), item.get("path", "/dashboard")
                     ).classes(
-                        f"font-medium no-underline flex-1 {'text-white' if current_path == item['path'] else 'text-gray-600'}"
+                        f"font-medium no-underline flex-1 {'text-white' if current_path.startswith(item["path"]) else 'text-gray-600'}"
                     )
 
                 # Project

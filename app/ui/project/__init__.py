@@ -29,7 +29,6 @@ def project():
 
     # UI Elements yang akan diupdate
     table_element = None
-    search_input = None
 
     def load_projects():
         """Load semua projects dari database"""
@@ -44,7 +43,7 @@ def project():
                     "log_path": p.log_path,
                     "framework_type": p.framework_type,
                     "is_alert": getattr(p, "is_alert", False),
-                    "status": "Active" if getattr(p, "is_alert", False) else "Inactive",
+                    "status": "Enabled" if getattr(p, "is_alert", False) else "Disabled",
                 }
                 for p in projects
             ]
@@ -198,14 +197,10 @@ def project():
                 search_term = e.value
                 filter_projects()
 
-            search_input = (
-                ui.input(
-                    placeholder="Search projects...",
-                    on_change=handle_search_change,
-                )
-                .classes("flex-1")
-                .props("clearable outlined")
-            )
+            ui.input(
+                placeholder="Search projects...",
+                on_change=handle_search_change,
+            ).classes("flex-1").props("clearable outlined")
 
             ui.button("Refresh", icon="refresh", on_click=load_projects).classes(
                 "bg-gray-500 hover:bg-gray-600 text-white rounded-lg px-4 py-2 transition-colors"
@@ -238,7 +233,7 @@ def project():
                 "field": "framework_type",
                 "align": "left",
             },
-            {"name": "status", "label": "Status", "field": "status", "align": "center"},
+            {"name": "status", "label": "Alert Status", "field": "status", "align": "center"},
             {
                 "name": "actions",
                 "label": "Actions",
@@ -267,6 +262,8 @@ def project():
             <q-td :props="props">
                 <q-btn flat round color="blue" icon="edit" size="sm" 
                        @click="$parent.$emit('edit', props.row)" />
+                <q-btn flat round color="green" icon="visibility" size="sm" 
+                       @click="$parent.$emit('detail', props.row)" />
                 <q-btn flat round color="red" icon="delete" size="sm" 
                        @click="$parent.$emit('delete', props.row)" />
             </q-td>
@@ -276,6 +273,9 @@ def project():
         # Event handlers untuk table actions
         table_element.on("edit", lambda e: open_edit_dialog(e.args))
         table_element.on("delete", lambda e: confirm_delete(e.args))
+        table_element.on(
+            "detail", lambda e: ui.navigate.to(f"project/{e.args['id']}/detail")
+        )
 
     # Dialog untuk Add/Edit Project
     frameworks = ["laravel", "django", "flask", "express", "spring", "fastapi"]

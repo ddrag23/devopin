@@ -8,8 +8,8 @@ class ProjectLogBase(BaseModel):
     message:str
     log_time:datetime
 
-class ProjectLogCreate(LogBase):
-    project_id: UUID
+class ProjectLogCreate(ProjectLogBase):
+    project_id: int
     @classmethod
     def as_form(
         cls,
@@ -21,7 +21,7 @@ class ProjectLogCreate(LogBase):
         return cls(log_level=log_level,message=message,project_id=project_id,log_time=log_time)
     
 
-class LogResponse(LogBase):
+class LogResponse(ProjectLogBase):
     created_at: datetime
     updated_at: datetime
     id:int
