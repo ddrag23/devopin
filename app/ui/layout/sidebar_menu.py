@@ -10,8 +10,13 @@ sidebar_menu = [
         "label": "Project",
     },
     {
-        "path": "/users",
-        "icon": "people",
-        "label": "Users",
+        "path": "/service-worker",
+        "icon": "dns",
+        "label": "Service Worker",
     },
+    # {
+    #     "path": "/users",
+    #     "icon": "people",
+    #     "label": "Users",
+    # },
 ]
