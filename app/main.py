@@ -6,8 +6,9 @@ from app.ui.project import project
 from app.ui.error_page import not_found_page
 from app.ui.project.detail import detail
 from app.ui.service_worker import service_worker # type: ignore
+from app.api.route import router
 
-
+app.include_router(router)
 @ui.page("/")
 def index():
     ui.navigate.to("/login")

@@ -251,7 +251,7 @@ def project():
             "body-cell-status",
             """
             <q-td :props="props">
-                <q-badge :color="props.value === 'Active' ? 'green' : 'grey'" :label="props.value" />
+                <q-badge :color="props.value === 'Enabled' ? 'green' : 'grey'" :label="props.value" />
             </q-td>
         """,
         )
