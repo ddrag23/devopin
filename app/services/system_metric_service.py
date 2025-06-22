@@ -31,7 +31,7 @@ def get_pagination_system_metrics(
 def create_system_metric(db: Session, payload: SystemMetricCreate) -> SystemMetricResponse:
     try:
         metric = SystemMetricModel(
-            timestamp=payload.timestamp,
+            timestamp_log=payload.timestamp,
             cpu_percent=payload.cpu_percent,
             memory_percent=payload.memory_percent,
             memory_available=payload.memory_available,

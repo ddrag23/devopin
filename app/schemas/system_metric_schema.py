@@ -5,12 +5,14 @@ from typing import Dict, Any
 
 
 class SystemMetricBase(BaseModel):
-    timestamp: datetime
     cpu_percent: float
     memory_percent: float
     memory_available: int
-    disk_usage: Dict[str, Any]  # Karena JSON-nya fleksibel
+    pass
 
+class SystemMetricCreate(SystemMetricBase):
+    disk_usage: Dict[str, Any]  # Karena JSON-nya fleksibel
+    timestamp: datetime
     @field_validator("timestamp", mode="before")
     @classmethod
     def parse_datetime(cls, value: str | datetime | None) -> datetime:
@@ -26,30 +28,27 @@ class SystemMetricBase(BaseModel):
             return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid datetime format: {value}") from e
-
-
-class SystemMetricCreate(SystemMetricBase):
-    @classmethod
-    def as_form(
-        cls,
-        timestamp: datetime = Form(...),
-        cpu_percent: float = Form(...),
-        memory_percent: float = Form(...),
-        memory_available: int = Form(...),
-        disk_usage: str = Form(...)  # Dikirim sebagai JSON string
-    ):
-        import json
-        return cls(
-            timestamp=timestamp,
-            cpu_percent=cpu_percent,
-            memory_percent=memory_percent,
-            memory_available=memory_available,
-            disk_usage=json.loads(disk_usage),
-        )
+    pass
 
 
 class SystemMetricResponse(SystemMetricBase):
     id: int
+    disk_usage: str  # Karena JSON-nya fleksibel
+    timestamp_log : datetime
+    @field_validator("timestamp_log", mode="before")
+    @classmethod
+    def parse_datetime(cls, value: str | datetime | None) -> datetime:
+        if value is None:
+            return datetime.now()
 
+        if isinstance(value, datetime):
+            return value
+
+        try:
+            if "T" in value:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid datetime format: {value}") from e
     class Config:
         from_attributes = True
