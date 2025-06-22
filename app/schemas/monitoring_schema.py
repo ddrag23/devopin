@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class LogEntry(BaseModel):
-    timestamp: str
+    timestamp: datetime
     level: str
     message: str
     context: Optional[str] = None
