@@ -57,6 +57,17 @@ def get_all_system_metrics(db: Session) -> list[SystemMetricResponse]:
     metrics = db.query(SystemMetricModel).all()
     return [SystemMetricResponse.model_validate(metric) for metric in metrics]
 
+def get_last_system_metric(db:Session) -> Optional[SystemMetricResponse]:
+    metric = db.query(SystemMetricModel).order_by(SystemMetricModel.timestamp_log.desc()).first()
+    if not metric:
+        return None
+    return SystemMetricResponse.model_validate(metric)
+
+def get_dashboard_system_metric(db:Session):
+    return {
+        "last" : get_last_system_metric(db),
+        "history" :get_all_system_metrics(db)
+    }
 
 def delete_system_metric(db: Session, id: int) -> bool:
     metric = db.query(SystemMetricModel).filter(SystemMetricModel.id == id).first()
