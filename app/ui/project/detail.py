@@ -62,7 +62,7 @@ def detail(id: str):
                                 query_params={
                                     'page': str(pagination.page),
                                     'limit': str(pagination.limit),
-                                    'project_id__eq': project.id  # pastikan ini sesuai field filter ProjectLogModel
+                                    'project_id__eq': str(project.id)  # pastikan ini sesuai field filter ProjectLogModel
                                 }
                             )
                             log_table.rows = [log.model_dump() for log in result.data]
