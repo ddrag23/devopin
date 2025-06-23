@@ -77,7 +77,7 @@ class QueryAdapter:
 
     def __apply_soft_delete(self, query: Query) -> Query:
         if self.is_soft_delete:
-            return query.filter(self.model.deleted_at is None)
+            return query.filter(self.model.deleted_at._is(None))
         return query
 
     def __apply_pagination(
