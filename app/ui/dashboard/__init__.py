@@ -34,120 +34,112 @@ def get_status_class(percentage):
 
 
 # Custom CSS for modern design
-ui.add_head_html('''
-<style>
-    .dashboard-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 20px;
-    }
-    
-    .metric-card {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 20px !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
-    }
-    
-    .metric-title {
-        color: white !important;
-        font-weight: 600 !important;
-        font-size: 1.2em !important;
-        margin-bottom: 10px !important;
-    }
-    
-    .metric-value {
-        color: white !important;
-        font-size: 2.5em !important;
-        font-weight: 700 !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    .metric-subtitle {
-        color: rgba(255, 255, 255, 0.7) !important;
-        font-size: 0.9em !important;
-    }
-    
-    .disk-item {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        margin: 8px 0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    
-    .disk-name {
-        color: white !important;
-        font-weight: 600 !important;
-        margin-bottom: 5px !important;
-    }
-    
-    .disk-stats {
-        color: rgba(255, 255, 255, 0.8) !important;
-        font-size: 0.85em !important;
-    }
-    
-    .status-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 8px;
-        animation: pulse 2s infinite;
-    }
-    
-    .custom-progress {
-        width: 100%;
-        height: 8px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-    }
-    
-    .cpu-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
-    .cpu-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
-    .cpu-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
-    
-    .memory-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
-    .memory-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-    
-    .timestamp-card {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 12px !important;
-        color: white !important;
-    }
-    
-    .chart-container {
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(20px);
-        border-radius: 20px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-</style>
-''')
+
 
 @ui.page("/dashboard")
 async def dashboard():
+    ui.add_css('''
+        .dashboard-container {
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .metric-title {
+            font-weight: 600 !important;
+            font-size: 1.2em !important;
+            margin-bottom: 10px !important;
+        }
+        
+        .metric-value {
+            font-size: 2.5em !important;
+            font-weight: 700 !important;
+        }
+        
+        .metric-subtitle {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 0.9em !important;
+        }
+        
+        .disk-item {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            padding: 15px !important;
+            margin: 8px 0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .disk-name {
+            font-weight: 600 !important;
+            margin-bottom: 5px !important;
+        }
+        
+        .disk-stats {
+            font-size: 0.85em !important;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .custom-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .cpu-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
+        .cpu-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
+        .cpu-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+        
+        .memory-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
+        .memory-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .timestamp-card {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px !important;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        }
+    ''')
     # Global variables for UI elements
     global cpu_progress, memory_progress, cpu_label, memory_label, memory_available_label
     global disk_container, timestamp_label, performance_chart
@@ -164,7 +156,7 @@ async def dashboard():
         
         with ui.row().classes('w-full gap-6'):
             # CPU Card
-            with ui.card().classes('metric-card flex-1'):
+            with ui.card().classes('metric-card w-full md:flex-1'):
                 with ui.column().classes('p-4 w-full'):
                     with ui.row().classes('items-center mb-4'):
                         ui.label('🔥').classes('text-3xl mr-3')
@@ -175,7 +167,7 @@ async def dashboard():
                     ui.label('Processor Load').classes('metric-subtitle mt-2')
             
             # Memory Card
-            with ui.card().classes('metric-card flex-1'):
+            with ui.card().classes('metric-card w-full md:flex-1'):
                 with ui.column().classes('p-4 w-full'):
                     with ui.row().classes('items-center mb-4'):
                         ui.label('💾').classes('text-3xl mr-3')
@@ -197,7 +189,7 @@ async def dashboard():
                     disk_container = ui.grid(columns=2).classes('w-full')
             
             # Performance Chart
-            with ui.card().classes('chart-container flex-1'):
+            with ui.card().classes('metric-card chart-container flex-1'):
                 with ui.column().classes('p-4 w-full'):
                     with ui.row().classes('items-center mb-4'):
                         ui.label('📊').classes('text-3xl mr-3')
@@ -241,7 +233,6 @@ async def update_dashboard():
         timestamp_label.text = f"Last updated: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}"
         cpu_percent = system_metrics["last"].cpu_percent
         cpu_label.text = f"{cpu_percent}%"
-        cpu_class = get_status_class(cpu_percent)
         cpu_progress.value = round(cpu_percent/100,2)
         cpu_progress.props(f'color={get_status_color(cpu_percent)}')
         
@@ -249,7 +240,6 @@ async def update_dashboard():
         memory_percent = system_metrics["last"].memory_percent
         memory_available = format_bytes(system_metrics['last'].memory_available)
         memory_label.text = f"{memory_percent}%"
-        memory_class = get_status_class(memory_percent)
         memory_progress.value = round(memory_percent/100,2)
         memory_available_label.text = f"Available: {memory_available}"
         
