@@ -4,13 +4,7 @@ from ...utils.db_context import db_context
 from ..layout import layout
 from ...services.project_log_service import get_pagination_log_project
 
-class PaginationState:
-    def __init__(self):
-        self.page = 1
-        self.limit = 5
-
-pagination = PaginationState()
-paginate = {'rowsPerPage': pagination.limit, 'sortBy': 'age', 'page': pagination.page}
+paginate = {'rowsPerPage': 10, 'sortBy': 'age', 'page': 1}
 
 @ui.refreshable
 def table_paginate(project):
@@ -23,6 +17,16 @@ def table_paginate(project):
     log_table = ui.table(columns=columns, rows=[], row_key='name',pagination=paginate).classes('w-full').props('dense hover=hover')
     log_table.on("request",on_pagination_change)
     log_table.add_slot('no-data', r'''<div class="full-width row flex-center text-gray-500 q-gutter-sm">No logs available</div>''')
+    log_table.add_slot("body-cell-log_time",""" <q-td :props="props">
+                    {{ new Date(props.value).toLocaleString('en-GB', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit', 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit' 
+                        }).replace(',', '') }}
+            </q-td> """)
     # 👇 Refresh function
     
 
@@ -34,8 +38,8 @@ def refresh_table(project,log_table):
                 db=db,
                 request=None,
                 query_params={
-                    'page': str(pagination.page),
-                    'limit': str(pagination.limit),
+                    'page': str(paginate['page']),
+                    'limit': str(paginate['rowsPerPage']),
                     'project_id__eq': str(project.id)  # pastikan ini sesuai field filter ProjectLogModel
                 }
             )
@@ -43,11 +47,9 @@ def refresh_table(project,log_table):
             log_table.pagination['rowsNumber'] = result.total
             log_table.update()
 def on_pagination_change(e):
-        pagination.page = e.args['pagination']['page']
-        pagination.limit = e.args['pagination']['rowsPerPage']
         paginate.update(e.args['pagination'])
         table_paginate.refresh()
-        print("jalan")
+
 @ui.page("/project/{id}/detail")
 def detail(id: str):
     project = {}
