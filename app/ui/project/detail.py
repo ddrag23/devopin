@@ -7,13 +7,50 @@ from ...services.project_log_service import get_pagination_log_project
 class PaginationState:
     def __init__(self):
         self.page = 1
-        self.limit = 10
+        self.limit = 5
 
 pagination = PaginationState()
+paginate = {'rowsPerPage': pagination.limit, 'sortBy': 'age', 'page': pagination.page}
+
+@ui.refreshable
+def table_paginate(project):
+    columns = [
+        {'name': 'message', 'label': 'Message', 'field': 'message', 'required': True, 'align': 'left'},
+        {'name': 'log_level', 'label': 'Log Level', 'field': 'log_level','align': 'center'},
+        {'name': 'log_time', 'label': 'Log Time', 'field': 'log_time','align': 'center'},
+    ]
+    
+    log_table = ui.table(columns=columns, rows=[], row_key='name',pagination=paginate).classes('w-full').props('dense hover=hover')
+    log_table.on("request",on_pagination_change)
+    log_table.add_slot('no-data', r'''<div class="full-width row flex-center text-gray-500 q-gutter-sm">No logs available</div>''')
+    # 👇 Refresh function
+    
+
+    # 👇 Load initial data
+    refresh_table(project,log_table)
+def refresh_table(project,log_table):
+        with db_context() as db:
+            result = get_pagination_log_project(
+                db=db,
+                request=None,
+                query_params={
+                    'page': str(pagination.page),
+                    'limit': str(pagination.limit),
+                    'project_id__eq': str(project.id)  # pastikan ini sesuai field filter ProjectLogModel
+                }
+            )
+            log_table.rows = [log.model_dump() for log in result.data]
+            log_table.pagination['rowsNumber'] = result.total
+            log_table.update()
+def on_pagination_change(e):
+        pagination.page = e.args['pagination']['page']
+        pagination.limit = e.args['pagination']['rowsPerPage']
+        paginate.update(e.args['pagination'])
+        table_paginate.refresh()
+        print("jalan")
 @ui.page("/project/{id}/detail")
 def detail(id: str):
     project = {}
-
     with db_context() as db:
         # Assuming you have a function to get project details by ID
         project = get_project_by_id(db, int(id))
@@ -39,36 +76,6 @@ def detail(id: str):
                     ui.label(f"Project Alert Status: {'Enabled' if project.is_alert else 'Disabled'}")
 
                 with ui.tab_panel(two):
-                    columns = [
-                        {'name': 'message', 'label': 'Message', 'field': 'message', 'required': True, 'align': 'left'},
-                        {'name': 'log_level', 'label': 'Log Level', 'field': 'log_level','align': 'center'},
-                        {'name': 'log_time', 'label': 'Log Time', 'field': 'log_time','align': 'center'},
-                    ]
-                    log_table = ui.table(columns=columns, rows=[], row_key='name').classes('w-full').props('dense hover=hover')
-                    log_table.add_slot('no-data', r'''<div class="full-width row flex-center text-gray-500 q-gutter-sm">No logs available</div>''')
-                    def on_pagination_change(e):
-                        pagination.page = e.args['page']
-                        pagination.limit = e.args['rowsPerPage']
-                        refresh_table()
-
-                    log_table.on('pagination', on_pagination_change)
-
-                    # 👇 Refresh function
-                    def refresh_table():
-                        with db_context() as db:
-                            result = get_pagination_log_project(
-                                db=db,
-                                request=None,
-                                query_params={
-                                    'page': str(pagination.page),
-                                    'limit': str(pagination.limit),
-                                    'project_id__eq': str(project.id)  # pastikan ini sesuai field filter ProjectLogModel
-                                }
-                            )
-                            log_table.rows = [log.model_dump() for log in result.data]
-                            log_table.pagination['rowsNumber'] = result.total
-                            log_table.update()
-
-                    # 👇 Load initial data
-                    refresh_table()
+                    table_paginate(project)
+                    
     layout()
