@@ -223,7 +223,6 @@ async def update_dashboard():
         system_metrics = await fetch_system_metrics()
         
         # Update timestamp
-        print("jalan")
         timestamp_raw = system_metrics['last'].timestamp_log
         if isinstance(timestamp_raw, str):
             timestamp = datetime.fromisoformat(timestamp_raw.replace('Z', '+00:00'))
