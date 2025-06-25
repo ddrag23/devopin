@@ -3,7 +3,7 @@ from ...services.project_service import get_project_by_id
 from ...utils.db_context import db_context
 from ..layout import layout
 from ...services.project_log_service import get_pagination_log_project
-from datetime import datetime, date
+from datetime import datetime
 
 paginate = {'rowsPerPage': 10, 'sortBy': 'age', 'page': 1}
 
