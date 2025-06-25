@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from ..schemas import AdapterListResponse
-from ..schemas.service_worker_schema import ServiceWorkerCreate,ServiceWorkerResponse
+from ..schemas.service_worker_schema import ServiceWorkerCreate,ServiceWorkerResponse,ServiceWorkerUpdateAgent
 from ..models.service_worker import ServiceWorker as ServiceWorkerModel
 from ..utils.query_adapter import QueryAdapter
 from datetime import datetime, timezone
@@ -32,7 +32,8 @@ def create_worker(db: Session, payload: ServiceWorkerCreate) -> ServiceWorkerRes
     project = ServiceWorkerModel(
         name=payload.name,
         description=payload.description,
-        status=payload.status,
+        is_monitoring=True,
+        is_enabled=True,
         created_at=datetime.now(tz=timezone.utc),
         updated_at=datetime.now(tz=timezone.utc),
     )
@@ -47,14 +48,14 @@ def create_worker(db: Session, payload: ServiceWorkerCreate) -> ServiceWorkerRes
 
 
 def update_worker(
-    db: Session, project_id: int, payload: ServiceWorkerCreate
+    db: Session, worker_id: int, payload: ServiceWorkerCreate
 ) -> ServiceWorkerResponse:
     """
     Update a project with the given payload.
 
     Args:
         db: Database session
-        project_id: ID of the project to update
+        worker_id: ID of the project to update
         payload: Project data to update
 
     Returns:
@@ -64,9 +65,9 @@ def update_worker(
         ValueError: If project not found or update fails
     """
     # Get existing project
-    project = db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == project_id).first()
+    project = db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == worker_id).first()
     if not project:
-        raise ValueError(f"Project with ID {project_id} not found")
+        raise ValueError(f"Project with ID {worker_id} not found")
 
     # Convert payload to dict and filter valid columns
     update_data = {
@@ -79,7 +80,7 @@ def update_worker(
     update_data[ServiceWorkerModel.updated_at] = datetime.now(tz=timezone.utc)
     try:
         # Perform the update
-        db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == project_id).update(
+        db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == worker_id).update(
             update_data, synchronize_session=False
         )
 
@@ -93,6 +94,53 @@ def update_worker(
         db.rollback()
         raise ValueError(f"Failed to update project: {str(e)}") from e
 
+def update_worker_from_agent(
+    db: Session, worker_name: str, payload: ServiceWorkerUpdateAgent
+) -> ServiceWorkerResponse | None:
+    """
+    Update a project with the given payload.
+
+    Args:
+        db: Database session
+        worker_name: ID of the project to update
+        payload: Project data to update
+
+    Returns:
+        ServiceWorkerResponse: The updated project
+
+    Raises:
+        ValueError: If project not found or update fails
+    """
+    # Get existing project
+    project = db.query(ServiceWorkerModel).filter(ServiceWorkerModel.name == worker_name).first()
+    if not project:
+        print(f"Project with ID {worker_name} not found")
+        return None
+
+    # Convert payload to dict and filter valid columns
+    update_data = {
+        getattr(ServiceWorkerModel, key): value
+        for key, value in payload.model_dump(exclude_unset=True).items()
+        if hasattr(ServiceWorkerModel, key)
+    }
+
+    # Add updated_at with proper column reference
+    update_data[ServiceWorkerModel.updated_at] = datetime.now(tz=timezone.utc)
+    try:
+        # Perform the update
+        db.query(ServiceWorkerModel).filter(ServiceWorkerModel.name == worker_name).update(
+            update_data, synchronize_session=False
+        )
+
+        db.commit()
+
+        # Refresh and return the updated project
+        db.refresh(project)
+        return ServiceWorkerResponse.model_validate(project)
+
+    except IntegrityError as e:
+        db.rollback()
+        print(f"Failed to update project: {str(e)}")
 
 def get_worker_by_id(db: Session, id: int) -> ServiceWorkerResponse | None:
     project = db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == id).first()
@@ -135,10 +183,10 @@ def delete_worker(db: Session, id: int) -> bool:
 
 
 # Additional utility functions
-def worker_exists(db: Session, project_id: int) -> bool:
+def worker_exists(db: Session, worker_id: int) -> bool:
     """Check if project exists by ID"""
     return (
-        db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == project_id).first() is not None
+        db.query(ServiceWorkerModel).filter(ServiceWorkerModel.id == worker_id).first() is not None
     )
 
 

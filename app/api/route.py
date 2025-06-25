@@ -7,6 +7,8 @@ from ..services.project_log_service import create_project_log
 from ..schemas.project_log_schema import ProjectLogCreate
 from ..services.system_metric_service import create_system_metric
 from ..schemas.system_metric_schema import SystemMetricCreate
+from ..services.service_worker_service import update_worker_from_agent
+from ..schemas.service_worker_schema import ServiceWorkerUpdateAgent
 from datetime import datetime
 router = APIRouter()
 
@@ -27,6 +29,18 @@ async def store_monitoring(data : MonitoringData,db:Session=Depends(get_db)):
         db,
         SystemMetricCreate.model_validate(system_metrics_dict)
     )
+    
+    for sw in data.services:
+        update_worker_from_agent(
+            db,
+            sw.name,  # Pass the worker's ID (int) instead of name (str)
+            ServiceWorkerUpdateAgent(
+                name=sw.name,
+                description=sw.name,
+                is_monitoring=True,
+                is_enabled=sw.enabled,
+                status=sw.status)
+        )
     return {"status": "ok", "message": "Store Monitoring","data" : data}
 
 @router.get("/api/projects")

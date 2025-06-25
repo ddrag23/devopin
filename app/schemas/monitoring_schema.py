@@ -20,10 +20,15 @@ class SystemMetrics(BaseModel):
     memory_available: int
     disk_usage: Dict[str, dict]
 
-
+class ServiceStatus(BaseModel):
+    name: str
+    status: str
+    active: bool
+    enabled: bool
+    uptime: Optional[str] = None
 class MonitoringData(BaseModel):
     timestamp: datetime
     logs: Dict[str, List[LogEntry]]
     system_metrics: SystemMetrics
-    services: List[Dict[str,str]]
+    services: List[ServiceStatus]
     

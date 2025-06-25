@@ -8,9 +8,7 @@ from typing import Optional
 class ServiceWorkerBase(BaseModel):
     name: str
     description: Optional[str] = None
-    status: str
-    is_monitoring: Optional[bool] = False
-    is_enabled: Optional[bool] = False,
+    
 
 
 class ServiceWorkerCreate(ServiceWorkerBase):
@@ -19,21 +17,40 @@ class ServiceWorkerCreate(ServiceWorkerBase):
         cls,
         name: str = Form(...),
         description: Optional[str] = Form(None),
-        status: Optional[str] = Form(None),
-        is_monitoring: Optional[bool] = Form(False),
-        is_enabled: Optional[bool] = Form(False),
     ):
         return cls(
             name=name,
             description=description,
-            status=status,
+        )
+
+class ServiceWorkerUpdateAgent(ServiceWorkerBase):
+    is_monitoring: Optional[bool] = None
+    is_enabled: Optional[bool] = None
+    status: Optional[str] = None
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        is_monitoring: bool = Form(False),
+        is_enabled: bool = Form(False),
+        status: Optional[str] = Form(None),
+        description: Optional[str] = Form(None),
+    ):
+        return cls(
+            name=name,
+            description=description,
             is_monitoring=is_monitoring,
             is_enabled=is_enabled,
+            status=status,
         )
 
 
 class ServiceWorkerResponse(ServiceWorkerBase):
     id: int
+    status: Optional[str] = None  # Status bisa None jika tidak ada
+    is_monitoring: Optional[bool]
+    is_enabled: Optional[bool]
     created_at: datetime
     updated_at: datetime
 

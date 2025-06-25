@@ -35,8 +35,8 @@ def service_worker():
                 {
                     "id": p.id,
                     "name": p.name,
-                    "description": getattr(p, "description", ""),
-                    "status": p.status,
+                    "description": p.description if p.description else "No description",
+                    "status": p.status if p.status is not None else "Worker Inactive",
                     "is_enabled": getattr(p, "is_enabled", False),
                     "is_monitoring": getattr(p, "is_monitoring", False),
                 }
@@ -221,7 +221,7 @@ def service_worker():
             "body-cell-status",
             """
             <q-td :props="props">
-                <q-badge :color="props.value === 'Active' ? 'green' : 'grey'" :label="props.value" />
+                <q-badge :color="props.value === 'active' ? 'green' : 'grey'" :label="props.value" />
             </q-td>
         """,
         )
