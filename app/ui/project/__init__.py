@@ -278,7 +278,7 @@ def project():
         )
 
     # Dialog untuk Add/Edit Project
-    frameworks = ["laravel", "django", "flask", "express", "spring", "fastapi"]
+    frameworks = ["laravel", "python","django", "flask", "express", "spring", "fastapi"]
     with (
         ui.dialog().props("persistent") as project_dialog,
         ui.card().classes("p-6 min-w-96"),
