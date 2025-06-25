@@ -16,7 +16,7 @@ async def store_monitoring(data : MonitoringData,db:Session=Depends(get_db)):
     # insert logs
     for log_type in data.logs.keys():
         fw_type,project_id = log_type.split("_")
-        for log in data.logs.get(fw_type,[]):
+        for log in data.logs.get(log_type,[]):
             create_project_log(db,ProjectLogCreate(log_level=log.level,log_time=log.timestamp,project_id=int(project_id),message=log.message))
     # insert system metric
     system_metrics_dict = data.system_metrics.model_dump() if hasattr(data.system_metrics, "dict") else dict(data.system_metrics)
