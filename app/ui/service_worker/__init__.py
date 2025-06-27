@@ -166,19 +166,7 @@ def service_worker():
                 ).classes("bg-red-500 text-white")
 
         delete_dialog.open()
-    def reset_filters_with_inputs(search_input, status_select):
-        # Reset all filters
-        reset_filters()
-        # Update UI elements
-        search_input.value = ''
-        status_select.value = ''
         
-    def reset_filters():
-    # Reset all filters
-        filters.update({
-            'status': '',
-        })
-        filter_workers()
     # Main UI
     ui.label("Service Worker Management").classes("text-2xl font-bold mb-6")
 
