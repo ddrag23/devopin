@@ -7,8 +7,9 @@ from ..services.project_log_service import create_project_log
 from ..schemas.project_log_schema import ProjectLogCreate
 from ..services.system_metric_service import create_system_metric
 from ..schemas.system_metric_schema import SystemMetricCreate
-from ..services.service_worker_service import update_worker_from_agent
+from ..services.service_worker_service import update_worker_from_agent,get_all_workers
 from ..schemas.service_worker_schema import ServiceWorkerUpdateAgent
+
 from datetime import datetime
 router = APIRouter()
 
@@ -47,3 +48,8 @@ async def store_monitoring(data : MonitoringData,db:Session=Depends(get_db)):
 def get_log_path(db:Session = Depends(get_db)):
     projects = get_all_projects(db)
     return {"message" : "OK", "data" : projects}
+
+@router.get("/api/workers")
+def get_workers(db:Session = Depends(get_db)):
+    workers = get_all_workers(db)
+    return {"message" : "OK", "data" : workers}

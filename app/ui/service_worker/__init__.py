@@ -5,7 +5,9 @@ from ...utils.db_context import db_context
 from ...services.service_worker_service import (create_worker, update_worker,
     delete_worker,get_all_workers)
 
-
+filters = {
+    'status': '',
+    }
 @ui.page("/service-worker")
 def service_worker():
     # State untuk manage data
@@ -48,19 +50,25 @@ def service_worker():
     def filter_workers():
         """Filter projects berdasarkan search term"""
         nonlocal filtered_workers
+        filtered_workers = service_workers.copy()
+
+        # Filter berdasarkan search term
         if search_term:
+            term = search_term.lower()
             filtered_workers = [
-                p
-                for p in service_workers
-                if search_term.lower() in p["name"].lower()
-                or (
-                    p["description"] is not None
-                    and search_term.lower() in p["description"].lower()
+                p for p in filtered_workers if (
+                    term in p["name"].lower()
+                    or (p.get("description") and term in p["description"].lower())
+                    or term in p["status"].lower()
                 )
-                or search_term.lower() in p["status"].lower()
             ]
-        else:
-            filtered_workers = service_workers.copy()
+
+        # Filter berdasarkan status
+        if filters.get('status'):
+            filtered_workers = [
+                p for p in filtered_workers if p["status"] == filters["status"]
+            ]
+
         refresh_table()
 
     def refresh_table():
@@ -68,7 +76,6 @@ def service_worker():
         if table_element:
             table_element.rows = filtered_workers
             table_element.update()
-
     def clear_form():
         """Clear form data"""
         form_data.update(
@@ -159,7 +166,19 @@ def service_worker():
                 ).classes("bg-red-500 text-white")
 
         delete_dialog.open()
-
+    def reset_filters_with_inputs(search_input, status_select):
+        # Reset all filters
+        reset_filters()
+        # Update UI elements
+        search_input.value = ''
+        status_select.value = ''
+        
+    def reset_filters():
+    # Reset all filters
+        filters.update({
+            'status': '',
+        })
+        filter_workers()
     # Main UI
     ui.label("Service Worker Management").classes("text-2xl font-bold mb-6")
 
@@ -172,7 +191,7 @@ def service_worker():
             )
 
         # Search section
-        with ui.row().classes("items-center gap-4 mb-4 w-full"):
+        with ui.row().classes("items-center flex justify-between mb-4 w-full"):
 
             def handle_search_change(e):
                 nonlocal search_term
@@ -182,11 +201,23 @@ def service_worker():
             ui.input(
                 placeholder="Search worker...",
                 on_change=handle_search_change,
-            ).classes("flex-1").props("clearable outlined")
-
-            ui.button("Refresh", icon="refresh", on_click=load_workers).classes(
-                "bg-gray-500 hover:bg-gray-600 text-white rounded-lg px-4 py-2 transition-colors"
-            )
+            ).classes("w-1/4").props("clearable dense")
+            with ui.row().classes('gap-2 items-center'):
+                            
+                # Log level filter
+                status_select = ui.select(
+                    options=['active', 'inactive'],
+                    label='Status',
+                    on_change=filter_workers
+                ).props('dense clearable').classes('w-32')
+                status_select.bind_value_to(filters, 'status')
+                
+                ui.button(
+                    '',
+                    icon='refresh',
+                    on_click=filter_workers
+                ).props('color=primary outline dense').tooltip('Refresh')
+            
 
         # Table section
         columns = [

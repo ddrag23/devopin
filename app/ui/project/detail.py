@@ -87,20 +87,13 @@ def apply_filters():
 
 def reset_filters_with_inputs(search_input, log_level_select, date_from_input, date_to_input):
     # Reset all filters
-    filters.update({
-        'search': '',
-        'log_level': '',
-        'date_from': '',
-        'date_to': ''
-    })
+    reset_filters()
     # Update UI elements
     search_input.value = ''
     log_level_select.value = ''
     date_from_input.value = ''
     date_to_input.value = ''
     
-    paginate.update({'rowsPerPage': 10, 'sortBy': 'age', 'page': 1})
-    table_paginate.refresh()
 
 def reset_filters():
     # Reset all filters
