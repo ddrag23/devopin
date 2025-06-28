@@ -23,6 +23,7 @@ def get_status_color(percentage):
         return 'orange'
     else:
         return 'red'
+        
 def get_status_class(percentage):
     """Get CSS class based on usage percentage"""
     if percentage < 50:
@@ -31,9 +32,6 @@ def get_status_class(percentage):
         return 'medium'
     else:
         return 'high'
-
-
-# Custom CSS for modern design
 
 
 @ui.page("/dashboard")
@@ -120,6 +118,8 @@ async def dashboard():
         
         .memory-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
         .memory-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
+        .memory-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -140,6 +140,7 @@ async def dashboard():
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
         }
     ''')
+    
     # Global variables for UI elements
     global cpu_progress, memory_progress, cpu_label, memory_label, memory_available_label
     global disk_container, timestamp_label, performance_chart
@@ -198,7 +199,7 @@ async def dashboard():
                     chart_data = {
                         'chart': {'type': 'line'},
                         'title': {'text': 'Performance Overview'},
-                        'xAxis': {'categories': ['1', '2', '3', '4', '5', '6']},
+                        'xAxis': {'categories': []},
                         'yAxis': {'title': {'text': 'Usage (%)'}},
                         'series': [
                             {'name': 'CPU', 'data': []},
@@ -212,69 +213,133 @@ async def dashboard():
     # Update dashboard data
     await update_dashboard()
     
-    # Schedule periodic updates
+    # Schedule periodic updates every 5 seconds
     ui.timer(5.0, update_dashboard)
     layout()
 
+
 async def update_dashboard():
-    """Update dashboard with current metrics"""
+    """Update dashboard with real metrics from database"""
     try:
-        # In real implementation, fetch fresh data here
+        # Fetch real data from database
         system_metrics = await fetch_system_metrics()
         
+        # Check if we have data
+        if not system_metrics.get('last'):
+            timestamp_label.text = "No data available"
+            cpu_label.text = "0%"
+            memory_label.text = "0%"
+            memory_available_label.text = "Available: 0 GB"
+            return
+        
+        last_metric = system_metrics['last']
+        
         # Update timestamp
-        timestamp_raw = system_metrics['last'].timestamp_log
+        timestamp_raw = last_metric.timestamp_log
         if isinstance(timestamp_raw, str):
             timestamp = datetime.fromisoformat(timestamp_raw.replace('Z', '+00:00'))
         else:
-            timestamp = timestamp_raw  # langsung pakai datetime
+            timestamp = timestamp_raw
 
         timestamp_label.text = f"Last updated: {timestamp.strftime('%d/%m/%Y %H:%M:%S')}"
-        cpu_percent = system_metrics["last"].cpu_percent
-        cpu_label.text = f"{cpu_percent}%"
-        cpu_progress.value = round(cpu_percent/100,2)
+        
+        # Update CPU
+        cpu_percent = float(last_metric.cpu_percent or 0)
+        cpu_label.text = f"{cpu_percent:.1f}%"
+        cpu_progress.value = round(cpu_percent/100, 2)
         cpu_progress.props(f'color={get_status_color(cpu_percent)}')
         
         # Update Memory
-        memory_percent = system_metrics["last"].memory_percent
-        memory_available = format_bytes(system_metrics['last'].memory_available)
-        memory_label.text = f"{memory_percent}%"
-        memory_progress.value = round(memory_percent/100,2)
+        memory_percent = float(last_metric.memory_percent or 0)
+        memory_available = format_bytes(last_metric.memory_available or 0)
+        memory_label.text = f"{memory_percent:.1f}%"
+        memory_progress.value = round(memory_percent/100, 2)
         memory_available_label.text = f"Available: {memory_available}"
         
         # Update Disk Usage
         disk_container.clear()
-        disk_usages = json.loads(system_metrics['last'].disk_usage)
-        for path, disk_data in disk_usages.items():
-            display_path = "Root" if path == "/" else path.split('/')[-1] or path
-            
+        try:
+            disk_usages = json.loads(last_metric.disk_usage or '{}')
+            for path, disk_data in disk_usages.items():
+                display_path = "Root" if path == "/" else path.split('/')[-1] or path
+                
+                with disk_container:
+                    with ui.card().classes('disk-item w-full'):
+                        with ui.column().classes('w-full'):
+                            ui.label(display_path).classes('disk-name')
+                            
+                            with ui.row().classes('w-full justify-between'):
+                                ui.label(f"Used: {format_bytes(disk_data.get('used', 0))}").classes('disk-stats')
+                                ui.label(f"Free: {format_bytes(disk_data.get('free', 0))}").classes('disk-stats')
+                            
+                            # Create progress bar with appropriate color
+                            disk_percent = disk_data.get('percent', 0)
+                            disk_class = get_status_class(disk_percent)
+                            ui.html(f'<div class="custom-progress"><div class="progress-fill memory-fill {disk_class}" style="width: {disk_percent}%"></div></div>').classes('mt-2')
+        except (json.JSONDecodeError, AttributeError):
             with disk_container:
-                with ui.card().classes('disk-item w-full'):
-                    with ui.column().classes('w-full'):
-                        ui.label(display_path).classes('disk-name')
-                        
-                        with ui.row().classes('w-full justify-between'):
-                            ui.label(f"Used: {format_bytes(disk_data['used'])}").classes('disk-stats')
-                            ui.label(f"Free: {format_bytes(disk_data['free'])}").classes('disk-stats')
-                        
-                        # Create progress bar with appropriate color
-                        disk_class = get_status_class(disk_data['percent'])
-                        ui.html(f'<div class="custom-progress"><div class="progress-fill memory-fill {disk_class}" style="width: {disk_data["percent"]}%"></div></div>').classes('mt-2')
-        # Update Performance Chart with Highcharts
-        cpu_history = [12, 19, 15, 22, 18, cpu_percent]
-        memory_history = [65, 68, 72, 69, 71, memory_percent]
+                ui.label("No disk data available").classes('text-sm text-gray-500')
         
-        # Update chart data using Highcharts API
-        performance_chart.options['series'][0]['data'].extend(cpu_history)
-        performance_chart.options['series'][1]['data'].extend(memory_history)
-        performance_chart.update()
+        # Update Performance Chart with Real Historical Data
+        history_data = system_metrics.get('history', [])
+        
+        if history_data and len(history_data) > 0:
+            # Prepare data for chart (limit to last 30 points for performance)
+            max_points = 30
+            if len(history_data) > max_points:
+                # Take evenly distributed samples
+                step = len(history_data) // max_points
+                sampled_data = history_data[::step][-max_points:]
+            else:
+                sampled_data = history_data[-max_points:]
+            
+            # Extract CPU and Memory data
+            timestamps = []
+            cpu_data = []
+            memory_data = []
+            
+            for metric in sampled_data:
+                # Format timestamp for chart
+                timestamp = metric.timestamp_log
+                if isinstance(timestamp, str):
+                    timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                
+                timestamps.append(timestamp.strftime('%d/%m %H:%M'))
+                
+                # Safe conversion with proper attribute access
+                cpu_value = getattr(metric, 'cpu_percent', 0) or 0
+                memory_value = getattr(metric, 'memory_percent', 0) or 0
+                
+                cpu_data.append(round(float(cpu_value), 1))
+                memory_data.append(round(float(memory_value), 1))
+            
+            # Update chart with real data
+            performance_chart.options['xAxis']['categories'] = timestamps
+            performance_chart.options['series'][0]['data'] = cpu_data
+            performance_chart.options['series'][1]['data'] = memory_data
+            performance_chart.options['title']['text'] = f'Performance History (Current Month - {len(sampled_data)} points)'
+            performance_chart.update()
+        else:
+            # No historical data available
+            performance_chart.options['title']['text'] = 'Performance History (No Data Available)'
+            performance_chart.options['xAxis']['categories'] = []
+            performance_chart.options['series'][0]['data'] = []
+            performance_chart.options['series'][1]['data'] = []
+            performance_chart.update()
         
     except Exception as e:
         print(f"Error updating dashboard: {e}")
+        timestamp_label.text = f"Error loading data: {str(e)}"
+        cpu_label.text = "Error"
+        memory_label.text = "Error"
 
-# Optional: Add real-time data fetching function
+
 async def fetch_system_metrics():
+    """Fetch system metrics with current month history"""
     return await run_in_threadpool(_get_metrics_sync)
+
+
 def _get_metrics_sync():
+    """Synchronous function to get metrics with history"""
     with db_context() as db:
         return get_dashboard_system_metric(db)
