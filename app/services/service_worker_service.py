@@ -200,3 +200,5 @@ def get_active_workers(db: Session) -> list[ServiceWorkerResponse]:
     """Get all workers with alerts enabled"""
     workers = db.query(ServiceWorkerModel).filter(ServiceWorkerModel.is_alert == 1).all()
     return [ServiceWorkerResponse.model_validate(project) for project in workers]
+
+
