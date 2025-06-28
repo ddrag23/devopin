@@ -4,63 +4,11 @@ from ...schemas.service_worker_schema import ServiceWorkerCreate,ServiceWorkerUp
 from ...utils.db_context import db_context
 from ...services.service_worker_service import (create_worker, update_worker,
     delete_worker, get_all_workers,update_worker_from_agent)
-import socket
-import json
-import os
-
+from ...utils.agent_controller import AgentController
 filters = {
     'status': '',
 }
 
-# Socket configuration for agent communication
-def get_socket_path() -> str:
-    """Get appropriate socket path for agent communication."""
-    # Production: systemd managed socket
-    prod_socket = "/run/devopin-agent.sock"
-    if os.path.exists(prod_socket):
-        return prod_socket
-    
-    # Development/fallback: use /tmp
-    return "/tmp/devopin-agent.sock"
-
-SOCKET_PATH = get_socket_path()
-class AgentController:
-    """Handler untuk komunikasi dengan devopin-agent via Unix socket"""
-    
-    @staticmethod
-    def send_command(command: str, service_name: str|None = None) -> dict:
-        """Send command to agent via Unix socket"""
-        try:
-            if not os.path.exists(SOCKET_PATH):
-                return {"success": False, "message": "Agent socket not found. Is devopin-agent running?"}
-            
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.settimeout(10)  # 10 second timeout
-            
-            sock.connect(SOCKET_PATH)
-            
-            # Prepare command
-            cmd_data = {
-                "command": command,
-                "service": service_name
-            }
-            
-            # Send command
-            message = json.dumps(cmd_data) + "\n"
-            sock.send(message.encode())
-            
-            # Receive response
-            response = sock.recv(1024).decode()
-            sock.close()
-            
-            return json.loads(response)
-            
-        except socket.timeout:
-            return {"success": False, "message": "Command timeout. Agent may be busy."}
-        except ConnectionRefusedError:
-            return {"success": False, "message": "Cannot connect to agent. Is devopin-agent service running?"}
-        except Exception as e:
-            return {"success": False, "message": f"Error communicating with agent: {str(e)}"}
 
 @ui.page("/service-worker")
 def service_worker():
@@ -292,39 +240,8 @@ def service_worker():
 
         control_dialog.open()
 
-    def check_agent_status():
-        """Check if devopin-agent is running"""
-        result = agent_controller.send_command("status")
-        if result.get("success"):
-            return True, "Agent is running"
-        else:
-            return False, result.get("message", "Agent not responding")
-
     # Main UI
     ui.label("Service Worker Management").classes("text-2xl font-bold mb-6")
-
-    # Agent status indicator
-    with ui.card().classes("p-4 mb-4 w-full"):
-        with ui.row().classes("items-center justify-between"):
-            with ui.row().classes("items-center gap-3"):
-                agent_status_icon = ui.html('<div class="w-3 h-3 rounded-full bg-gray-500"></div>')
-                agent_status_label = ui.label("Checking agent status...").classes("font-medium")
-            
-            ui.button(
-                "Check Agent", 
-                icon="refresh",
-                on_click=lambda: update_agent_status()
-            ).classes("bg-blue-500 text-white")
-
-    def update_agent_status():
-        """Update agent status display"""
-        is_running, message = check_agent_status()
-        color = "green" if is_running else "red"
-        agent_status_icon.content = f'<div class="w-3 h-3 rounded-full bg-{color}-500"></div>'
-        agent_status_label.text = f"Devopin Agent: {message}"
-
-    # Initialize agent status check
-    update_agent_status()
 
     with ui.card().classes("p-6 w-full"):
         # Header section
