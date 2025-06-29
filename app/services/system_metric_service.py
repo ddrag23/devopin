@@ -14,7 +14,7 @@ def get_pagination_system_metrics(
     request: Optional[Request], db: Session
 ) -> AdapterListResponse[SystemMetricResponse]:
     allowed_searchs = ["timestamp", "cpu_percent", "memory_percent"]
-    base_query = db.query(SystemMetricModel)
+    base_query = db.query(SystemMetricModel).order_by(SystemMetricModel.timestamp_log.desc())
     adapter = QueryAdapter(
         model=SystemMetricModel,
         request=request,

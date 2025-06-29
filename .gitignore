@@ -60,3 +60,4 @@ agents/*.pyc
 *.db
 .env
 .nicegui
+CLAUDE.md

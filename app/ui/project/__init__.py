@@ -7,333 +7,317 @@ from ...services.project_service import (
     create_project,
     update_project,
     delete_project,
+    get_project_by_id,
 )
 
+# Global variables for UI elements
+project_table = None
+current_page = 1
+current_limit = 10
+total_count = 0
+
+def get_status_color(is_alert: bool) -> str:
+    """Get color based on alert status"""
+    return 'green' if is_alert else 'gray'
+
+def get_status_text(is_alert: bool) -> str:
+    """Get text based on alert status"""
+    return 'Enabled' if is_alert else 'Disabled'
+
+def get_framework_icon(framework: str) -> str:
+    """Get icon based on framework type"""
+    icons = {
+        'laravel': 'code',
+        'python': 'code',
+        'django': 'web',
+        'flask': 'web',
+        'express': 'javascript',
+        'spring': 'coffee',
+        'fastapi': 'rocket_launch'
+    }
+    return icons.get(framework.lower(), 'folder')
+
+async def handle_create_project():
+    """Show create project dialog"""
+    frameworks = ["laravel", "python", "django", "flask", "express", "spring", "fastapi"]
+    
+    with ui.dialog() as dialog, ui.card().classes('w-96'):
+        ui.label('Create New Project').classes('text-lg font-bold mb-4')
+        
+        name_input = ui.input('Project Name').classes('w-full mb-2').props('outlined')
+        description_input = ui.textarea('Description').classes('w-full mb-2').props('outlined')
+        log_path_input = ui.input('Log Path').classes('w-full mb-2').props('outlined')
+        
+        with ui.row().classes('w-full gap-2 mb-2'):
+            framework_select = ui.select(
+                frameworks,
+                label='Framework Type',
+                value='python'
+            ).classes('flex-1').props('outlined')
+            
+            alert_switch = ui.switch('Enable Alerts', value=False).classes('mt-4')
+        
+        with ui.row().classes('w-full justify-end gap-2 mt-4'):
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+            
+            def create_action():
+                try:
+                    if not name_input.value.strip():
+                        ui.notify("Project name is required!", type="negative")
+                        return
+                    
+                    if not log_path_input.value.strip():
+                        ui.notify("Log path is required!", type="negative")
+                        return
+                    
+                    with db_context() as db:
+                        payload = ProjectCreate(
+                            name=name_input.value.strip(),
+                            description=description_input.value.strip(),
+                            log_path=log_path_input.value.strip(),
+                            framework_type=framework_select.value,
+                            is_alert=alert_switch.value
+                        )
+                        create_project(db, payload)
+                        ui.notify("Project created successfully!", type="positive")
+                        refresh_project_data()
+                        dialog.close()
+                except Exception as e:
+                    ui.notify(f"Error: {str(e)}", type="negative")
+            
+            ui.button('Create', on_click=create_action).props('color=primary')
+    
+    dialog.open()
+
+async def handle_edit_project(project_id: int):
+    """Show edit project dialog"""
+    frameworks = ["laravel", "python", "django", "flask", "express", "spring", "fastapi"]
+    
+    # Fetch current project data
+    with db_context() as db:
+        project_data = get_project_by_id(db, project_id)
+    
+    if not project_data:
+        ui.notify("Project not found", type="negative")
+        return
+    
+    with ui.dialog() as dialog, ui.card().classes('w-96'):
+        ui.label('Edit Project').classes('text-lg font-bold mb-4')
+        
+        name_input = ui.input('Project Name', value=project_data.name).classes('w-full mb-2').props('outlined')
+        description_input = ui.textarea('Description', value=project_data.description or '').classes('w-full mb-2').props('outlined')
+        log_path_input = ui.input('Log Path', value=project_data.log_path).classes('w-full mb-2').props('outlined')
+        
+        with ui.row().classes('w-full gap-2 mb-2'):
+            framework_select = ui.select(
+                frameworks,
+                label='Framework Type',
+                value=project_data.framework_type
+            ).classes('flex-1').props('outlined')
+            
+            alert_switch = ui.switch('Enable Alerts', value=getattr(project_data, 'is_alert', False)).classes('mt-4')
+        
+        with ui.row().classes('w-full justify-end gap-2 mt-4'):
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+            
+            def update_action():
+                try:
+                    if not name_input.value.strip():
+                        ui.notify("Project name is required!", type="negative")
+                        return
+                    
+                    if not log_path_input.value.strip():
+                        ui.notify("Log path is required!", type="negative")
+                        return
+                    
+                    with db_context() as db:
+                        payload = ProjectCreate(
+                            name=name_input.value.strip(),
+                            description=description_input.value.strip(),
+                            log_path=log_path_input.value.strip(),
+                            framework_type=framework_select.value,
+                            is_alert=alert_switch.value
+                        )
+                        update_project(db, project_id, payload)
+                        ui.notify("Project updated successfully!", type="positive")
+                        refresh_project_data()
+                        dialog.close()
+                except Exception as e:
+                    ui.notify(f"Error: {str(e)}", type="negative")
+            
+            ui.button('Update', on_click=update_action).props('color=primary')
+    
+    dialog.open()
+
+async def handle_delete_project(project_id: int, project_name: str):
+    """Show delete confirmation dialog"""
+    with ui.dialog() as dialog, ui.card():
+        ui.label(f'Delete Project: {project_name}').classes('text-lg font-bold mb-4')
+        ui.label('Are you sure you want to delete this project? This action cannot be undone.').classes('mb-4')
+        
+        with ui.row().classes('w-full justify-end gap-2'):
+            ui.button('Cancel', on_click=dialog.close).props('flat')
+            
+            def delete_action():
+                try:
+                    with db_context() as db:
+                        delete_project(db, project_id)
+                        ui.notify("Project deleted successfully!", type="positive")
+                        refresh_project_data()
+                        dialog.close()
+                except Exception as e:
+                    ui.notify(f"Error: {str(e)}", type="negative")
+            
+            ui.button('Delete', on_click=delete_action).props('color=red')
+    
+    dialog.open()
+
+def refresh_project_data():
+    """Refresh project table"""
+    with db_context() as db:
+        projects = get_all_projects(db)
+        projects_data = [
+            {
+                "id": p.id,
+                "name": p.name,
+                "description": getattr(p, "description", ""),
+                "log_path": p.log_path,
+                "framework_type": p.framework_type,
+                "is_alert": getattr(p, "is_alert", False),
+            }
+            for p in projects
+        ]
+        update_project_table(projects_data)
+
+def update_project_table(projects):
+    """Update the project table with new data"""
+    global project_table
+    
+    if project_table:
+        project_table.clear()
+        
+        if not projects:
+            with project_table:
+                ui.label("No projects found").classes("text-center text-gray-500 p-4")
+            return
+        
+        with project_table:
+            # Table header
+            with ui.row().classes("w-full bg-gray-100 p-3 rounded-t-lg font-bold text-sm"):
+                ui.label("Project").classes("flex-1")
+                ui.label("Framework").classes("w-32 text-center")
+                ui.label("Log Path").classes("w-64")
+                ui.label("Alerts").classes("w-24 text-center")
+                ui.label("Actions").classes("w-40 text-center")
+            
+            # Table rows
+            for project in projects:
+                with ui.row().classes("w-full border-b border-gray-200 p-3 hover:bg-gray-50 items-center"):
+                    # Project info
+                    with ui.column().classes("flex-1"):
+                        ui.label(project["name"]).classes("font-medium text-sm")
+                        if project["description"]:
+                            ui.label(project["description"]).classes("text-xs text-gray-600 mt-1")
+                    
+                    # Framework
+                    with ui.element('div').classes("w-32 flex justify-center items-center"):
+                        ui.icon(get_framework_icon(project["framework_type"])).classes("text-blue-500 mr-2")
+                        ui.label(project["framework_type"].title()).classes("text-sm")
+                    
+                    # Log Path
+                    with ui.element('div').classes("w-64"):
+                        ui.label(project["log_path"]).classes("text-sm font-mono text-gray-600")
+                    
+                    # Alerts
+                    with ui.element('div').classes("w-24 flex justify-center"):
+                        ui.chip(
+                            get_status_text(project["is_alert"]),
+                            color=get_status_color(project["is_alert"])
+                        ).classes("text-xs")
+                    
+                    # Actions
+                    with ui.row().classes("w-40 justify-center gap-1"):
+                        # View details button
+                        ui.button(
+                            icon="visibility",
+                            on_click=lambda p=project: ui.navigate.to(f"/project/{p['id']}/detail")
+                        ).classes("text-green-600 hover:bg-green-100 p-1").props("flat dense size=sm").tooltip("View Details")
+                        
+                        # Edit button
+                        ui.button(
+                            icon="edit",
+                            on_click=lambda p=project: handle_edit_project(p["id"])
+                        ).classes("text-blue-600 hover:bg-blue-100 p-1").props("flat dense size=sm").tooltip("Edit")
+                        
+                        # Delete button
+                        ui.button(
+                            icon="delete",
+                            on_click=lambda p=project: handle_delete_project(p["id"], p["name"])
+                        ).classes("text-red-600 hover:bg-red-100 p-1").props("flat dense size=sm").tooltip("Delete")
+
+async def handle_search(search_text: str):
+    """Handle search functionality"""
+    refresh_project_data()
 
 @ui.page("/project")
 def project():
-    # State untuk manage data
-    projects_data = []
-    filtered_projects = []
-    search_term = ""
-
-    # Form state
-    form_data = {
-        "id": None,
-        "name": "",
-        "description": "",
-        "log_path": "",
-        "is_alert": False,
-        "framework_type": "",
-    }
-
-    # UI Elements yang akan diupdate
-    table_element = None
-
-    def load_projects():
-        """Load semua projects dari database"""
-        nonlocal projects_data, filtered_projects
-        with db_context() as db:
-            projects = get_all_projects(db)
-            projects_data = [
-                {
-                    "id": p.id,
-                    "name": p.name,
-                    "description": getattr(p, "description", ""),
-                    "log_path": p.log_path,
-                    "framework_type": p.framework_type,
-                    "is_alert": getattr(p, "is_alert", False),
-                    "status": "Enabled" if getattr(p, "is_alert", False) else "Disabled",
-                }
-                for p in projects
-            ]
-            filtered_projects = projects_data.copy()
-            refresh_table()
-
-    def filter_projects():
-        """Filter projects berdasarkan search term"""
-        nonlocal filtered_projects
-        if search_term:
-            filtered_projects = [
-                p
-                for p in projects_data
-                if search_term.lower() in p["name"].lower()
-                or (
-                    p["description"] is not None
-                    and search_term.lower() in p["description"].lower()
-                )
-                or search_term.lower() in p["log_path"].lower()
-                or search_term.lower() in p["framework_type"].lower()
-            ]
-        else:
-            filtered_projects = projects_data.copy()
-        refresh_table()
-
-    def refresh_table():
-        """Refresh table dengan data terbaru"""
-        if table_element:
-            table_element.rows = filtered_projects
-            table_element.update()
-
-    def clear_form():
-        """Clear form data"""
-        form_data.update(
-            {
-                "id": None,
-                "name": "",
-                "description": "",
-                "log_path": "",
-                "is_alert": False,
-            }
-        )
-
-    def open_add_dialog():
-        """Open dialog untuk add project"""
-        clear_form()
-        project_dialog.open()
-        dialog_title.text = "Add New Project"
-        save_button.text = "Create Project"
-
-    def open_edit_dialog(project):
-        """Open dialog untuk edit project"""
-        form_data.update(project)
-
-        # Update form inputs
-        name_input.value = project["name"]
-        description_input.value = project["description"]
-        log_path_input.value = project["log_path"]
-        alert_switch.value = project["is_alert"]
-        framework_type.value = project["framework_type"]
-
-        project_dialog.open()
-        dialog_title.text = "Edit Project"
-        save_button.text = "Update Project"
-
-    def save_project():
-        """Save atau update project"""
-        try:
-            # Validation
-            if not name_input.value.strip():
-                ui.notify("Project name is required!", type="negative")
-                return
-
-            if not log_path_input.value.strip():
-                ui.notify("Log path is required!", type="negative")
-                return
-            if not log_path_input.value.strip():
-                ui.notify("Framework Type is required!", type="negative")
-                return
-
-            with db_context() as db:
-                project_data = {
-                    "name": name_input.value.strip(),
-                    "description": description_input.value.strip(),
-                    "log_path": log_path_input.value.strip(),
-                    "is_alert": alert_switch.value,
-                    "framework_type": framework_type.value,
-                }
-
-                if form_data["id"]:  # Update
-                    update_project(db, form_data["id"], ProjectCreate(**project_data))
-                    ui.notify("Project updated successfully!", type="positive")
-                else:  # Create
-                    create_project(db, ProjectCreate(**project_data))
-                    ui.notify("Project created successfully!", type="positive")
-
-                project_dialog.close()
-                load_projects()
-
-        except Exception as e:
-            ui.notify(f"Error saving project: {str(e)}", type="negative")
-
-    def delete_project_handler(project_id):
-        """Delete project dengan confirmation"""
-        try:
-            with db_context() as db:
-                delete_project(db, project_id)
-                ui.notify("Project deleted successfully!", type="positive")
-                load_projects()
-        except Exception as e:
-            ui.notify(f"Error deleting project: {str(e)}", type="negative")
-
-    def confirm_delete(project):
-        """Show confirmation dialog untuk delete"""
-        with ui.dialog() as delete_dialog, ui.card().classes("p-6"):
-            ui.label(f'Delete Project "{project["name"]}"?').classes(
-                "text-lg font-semibold mb-4"
-            )
-            ui.label("This action cannot be undone.").classes("text-gray-600 mb-6")
-
-            with ui.row().classes("gap-2 justify-end w-full"):
-                ui.button("Cancel", on_click=delete_dialog.close).classes(
-                    "bg-gray-500 text-white"
-                )
+    """Project management page"""
+    global project_table
+    
+    ui.add_css('''
+        .project-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .project-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+    ''')
+    
+    with ui.column().classes('project-container w-full'):
+        # Header
+        with ui.row().classes('w-full justify-between items-center mb-6'):
+            ui.label('📁 Project Management').classes('text-3xl font-bold')
+            
+            # Actions and filters
+            with ui.row().classes('items-center gap-3'):
+                search_input = ui.input(
+                    placeholder="Search projects...",
+                    on_change=lambda e: handle_search(e.value)
+                ).classes('w-64')
+                search_input.props('clearable outlined dense')
+                
                 ui.button(
-                    "Delete",
-                    on_click=lambda: (
-                        delete_project_handler(project["id"]),
-                        delete_dialog.close(),
-                    ),
-                ).classes("bg-red-500 text-white")
-
-        delete_dialog.open()
-
-    # Main UI
-    ui.label("Project Management").classes("text-2xl font-bold mb-6")
-
-    with ui.card().classes("p-6 w-full"):
-        # Header section
-        with ui.row().classes("items-center justify-between w-full mb-6"):
-            ui.label("Project List").classes("text-xl font-semibold")
-            ui.button("Add Project", icon="add", on_click=open_add_dialog).classes(
-                "bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2 transition-colors"
-            )
-
-        # Search section
-        with ui.row().classes("items-center gap-4 mb-4 w-full"):
-
-            def handle_search_change(e):
-                nonlocal search_term
-                search_term = e.value
-                filter_projects()
-
-            ui.input(
-                placeholder="Search projects...",
-                on_change=handle_search_change,
-            ).classes("flex-1").props("clearable outlined")
-
-            ui.button("Refresh", icon="refresh", on_click=load_projects).classes(
-                "bg-gray-500 hover:bg-gray-600 text-white rounded-lg px-4 py-2 transition-colors"
-            )
-
-        # Table section
-        columns = [
-            {
-                "name": "name",
-                "label": "Project Name",
-                "field": "name",
-                "align": "left",
-                "sortable": True,
-            },
-            {
-                "name": "description",
-                "label": "Description",
-                "field": "description",
-                "align": "left",
-            },
-            {
-                "name": "log_path",
-                "label": "Log Path",
-                "field": "log_path",
-                "align": "left",
-            },
-            {
-                "name": "framework",
-                "label": "Framework",
-                "field": "framework_type",
-                "align": "left",
-            },
-            {"name": "status", "label": "Alert Status", "field": "status", "align": "center"},
-            {
-                "name": "actions",
-                "label": "Actions",
-                "field": "actions",
-                "align": "center",
-            },
-        ]
-
-        table_element = ui.table(
-            columns=columns, rows=filtered_projects, row_key="id", pagination=10
-        ).classes("w-full")
-
-        # Custom slot untuk actions column
-        table_element.add_slot(
-            "body-cell-status",
-            """
-            <q-td :props="props">
-                <q-badge :color="props.value === 'Enabled' ? 'green' : 'grey'" :label="props.value" />
-            </q-td>
-        """,
-        )
-
-        table_element.add_slot(
-            "body-cell-actions",
-            """
-            <q-td :props="props">
-                <q-btn flat round color="blue" icon="edit" size="sm" 
-                       @click="$parent.$emit('edit', props.row)" />
-                <q-btn flat round color="green" icon="visibility" size="sm" 
-                       @click="$parent.$emit('detail', props.row)" />
-                <q-btn flat round color="red" icon="delete" size="sm" 
-                       @click="$parent.$emit('delete', props.row)" />
-            </q-td>
-        """,
-        )
-
-        # Event handlers untuk table actions
-        table_element.on("edit", lambda e: open_edit_dialog(e.args))
-        table_element.on("delete", lambda e: confirm_delete(e.args))
-        table_element.on(
-            "detail", lambda e: ui.navigate.to(f"project/{e.args['id']}/detail")
-        )
-
-    # Dialog untuk Add/Edit Project
-    frameworks = ["laravel", "python","django", "flask", "express", "spring", "fastapi"]
-    with (
-        ui.dialog().props("persistent") as project_dialog,
-        ui.card().classes("p-6 min-w-96"),
-    ):
-        dialog_title = ui.label("Add New Project").classes("text-xl font-semibold mb-4")
-
-        with ui.column().classes("gap-4 w-full"):
-            name_input = (
-                ui.input(label="Project Name *", placeholder="Enter project name")
-                .classes("w-full")
-                .props("outlined")
-            )
-
-            description_input = (
-                ui.textarea(
-                    label="Description", placeholder="Enter project description"
-                )
-                .classes("w-full")
-                .props("outlined")
-            )
-
-            log_path_input = (
-                ui.input(label="Log Path *", placeholder="/path/to/logs")
-                .classes("w-full")
-                .props("outlined")
-            )
-            framework_type = (
-                ui.select(
-                    label="Framework Type *",
-                    options=frameworks,
-                    with_input=True,
-                    on_change=lambda e: ui.notify(e.value),
-                )
-                .classes("w-full")
-                .props("outlined")
-            )
-
-            alert_switch = ui.switch(text="Enable Alerts", value=False).classes("mb-2")
-
-            ui.label("* Required fields").classes("text-xs text-gray-500")
-
-        ui.separator().classes("my-4")
-
-        # Dialog buttons
-        with ui.row().classes("gap-2 justify-end w-full"):
-            ui.button("Cancel", on_click=project_dialog.close).classes(
-                "bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-            )
-
-            save_button = ui.button("Create Project", on_click=save_project).classes(
-                "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-            )
-
+                    icon="add",
+                    text="New Project",
+                    on_click=handle_create_project
+                ).classes("bg-blue-500 text-white")
+                
+                ui.button(
+                    icon="refresh",
+                    on_click=refresh_project_data
+                ).classes("p-2").tooltip("Refresh")
+        
+        # Main project table
+        with ui.card().classes('project-card w-full'):
+            with ui.column().classes('p-6 w-full'):
+                with ui.row().classes('w-full justify-between items-center mb-4'):
+                    ui.label('Projects').classes('text-xl font-semibold')
+                    
+                    # Info text
+                    ui.label('Manage your application projects and monitoring settings').classes('text-sm text-gray-600')
+                
+                # Project table container
+                project_table = ui.column().classes("w-full")
+    
     # Load initial data
-    load_projects()
-
-    # Apply layout
+    refresh_project_data()
+    
+    # Add layout
     layout()

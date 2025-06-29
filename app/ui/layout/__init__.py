@@ -1,6 +1,9 @@
 from nicegui import ui, app
 from .sidebar_menu import sidebar_menu
 from ...utils.agent_controller import AgentController
+from ...services.alarm_service import get_active_alarms
+from ...utils.db_context import db_context
+from fastapi.concurrency import run_in_threadpool
 
 def check_agent_status():
     """Check agent status using AgentController - simple version"""
@@ -11,6 +14,19 @@ def check_agent_status():
         return True, "Online"
     else:
         return False, "Offline"
+
+async def get_alarm_count():
+    """Get active alarm count"""
+    try:
+        return await run_in_threadpool(_get_alarm_count_sync)
+    except Exception:
+        return 0
+
+def _get_alarm_count_sync():
+    """Synchronous function to get alarm count"""
+    with db_context() as db:
+        active_alarms = get_active_alarms(db)
+        return len(active_alarms)
 
 
 def layout():
@@ -44,8 +60,25 @@ def layout():
             ui.icon("code", size="lg").classes("text-white")
             ui.label("Devopin").classes("text-2xl font-bold text-white tracking-wide")
 
-        # Right side: User dropdown
+        # Right side: Alarm + User dropdown
         with ui.row().classes("items-center gap-3"):
+            # Alarm Bell Icon with counter
+            with ui.element('div').classes('relative'):
+                alarm_button = ui.button(
+                    icon="notifications",
+                    on_click=lambda: ui.navigate.to("/alarm")
+                ).classes(
+                    "text-white hover:bg-white/20 transition-all duration-200 rounded-lg p-2"
+                ).tooltip("View Alarms")
+                
+                # Alarm counter badge
+                alarm_badge = ui.element('div').classes(
+                    'absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-5 h-5 flex items-center justify-center px-1'
+                ).style('display: none;')
+                
+                alarm_count_label = ui.label('0').classes('text-xs font-bold')
+                alarm_count_label.move(alarm_badge)
+            
             # User info
             ui.label(f"Welcome, {user.get('name', 'User')}").classes("text-white/80 text-sm hidden md:block")
             
@@ -115,3 +148,25 @@ def layout():
                         f"font-medium no-underline flex-1 "
                         f"{'text-white' if is_active else 'text-gray-600 hover:text-gray-800'}"
                     )
+    
+    # Update alarm counter periodically
+    async def update_alarm_counter():
+        try:
+            count = await get_alarm_count()
+            alarm_count_label.text = str(count)
+            if count > 0:
+                alarm_badge.style('display: flex;')
+                # Add animation for new alarms
+                alarm_button.classes(remove='animate-pulse')
+                alarm_button.classes('animate-pulse')
+            else:
+                alarm_badge.style('display: none;')
+                alarm_button.classes(remove='animate-pulse')
+        except Exception as e:
+            print(f"Error updating alarm counter: {e}")
+    
+    # Initial update and periodic updates
+    ui.timer(10.0, update_alarm_counter)  # Update every 10 seconds
+    
+    # Run initial update
+    ui.context.client.on_connect(update_alarm_counter)
