@@ -9,9 +9,9 @@ from ..services.alarm_service import create_alarm
 from ..schemas.alarm_schema import AlarmCreate
 from ..utils.db_context import db_context
 import json
-import logging
+from ..core.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("app.threshold_monitor")
 
 class ThresholdMonitor:
     """Service to monitor system metrics against configured thresholds and create alarms"""
@@ -68,7 +68,7 @@ class ThresholdMonitor:
         metrics = metrics_query.all()
         
         if not metrics:
-            logger.debug(f"No metrics found for threshold {threshold.name}")
+            logger.info(f"No metrics found for threshold {threshold.name}")
             return None
         
         # Check if threshold condition is met for the entire duration
@@ -108,7 +108,6 @@ class ThresholdMonitor:
             m for m in metrics 
             if getattr(m, 'timestamp_log') >= earliest_required_time
         ]
-        
         if len(relevant_metrics) < 2:  # Need at least 2 points to establish a trend
             return False
         
@@ -128,11 +127,11 @@ class ThresholdMonitor:
         """Check if a single metric violates the threshold condition"""
         
         # Get the metric value based on threshold type
-        if threshold.metric_type == ThresholdType.CPU:
+        if threshold.metric_type.value.lower() == ThresholdType.CPU.value:
             metric_value = metric.cpu_percent or 0
-        elif threshold.metric_type == ThresholdType.MEMORY:
+        elif threshold.metric_type.value.lower() == ThresholdType.MEMORY.value:
             metric_value = metric.memory_percent or 0
-        elif threshold.metric_type == ThresholdType.DISK:
+        elif threshold.metric_type.value.lower() == ThresholdType.DISK.value:
             # For disk, we'll check the highest usage percentage across all disks
             try:
                 disk_usage_str = getattr(metric, 'disk_usage', '{}') or '{}'
@@ -154,11 +153,11 @@ class ThresholdMonitor:
         # Evaluate condition
         threshold_value = threshold.threshold_value
         
-        if threshold.condition == ThresholdCondition.GREATER_THAN:
+        if threshold.condition.value.lower() == ThresholdCondition.GREATER_THAN.value:
             return metric_value > threshold_value
-        elif threshold.condition == ThresholdCondition.LESS_THAN:
+        elif threshold.condition.value.lower() == ThresholdCondition.LESS_THAN.value:
             return metric_value < threshold_value
-        elif threshold.condition == ThresholdCondition.EQUALS:
+        elif threshold.condition.value.lower() == ThresholdCondition.EQUALS.value:
             # For equals, we'll use a small tolerance (±1%)
             return abs(metric_value - threshold_value) <= 1.0
         
@@ -177,13 +176,13 @@ class ThresholdMonitor:
             }
             
             # Get current metric value for context
-            if threshold.metric_type == ThresholdType.CPU:
+            if threshold.metric_type.value.lower() == ThresholdType.CPU.value:
                 current_value = latest_metric.cpu_percent or 0
                 metric_unit = "%"
-            elif threshold.metric_type == ThresholdType.MEMORY:
+            elif threshold.metric_type.value.lower() == ThresholdType.MEMORY.value:
                 current_value = latest_metric.memory_percent or 0
                 metric_unit = "%"
-            elif threshold.metric_type == ThresholdType.DISK:
+            elif threshold.metric_type.value.lower() == ThresholdType.DISK.value:
                 try:
                     disk_usage_str = getattr(latest_metric, 'disk_usage', '{}') or '{}'
                     disk_data = json.loads(disk_usage_str)
@@ -205,7 +204,7 @@ class ThresholdMonitor:
                 'greater_than': 'exceeded',
                 'less_than': 'below',
                 'equals': 'equals'
-            }.get(threshold.condition, 'violated')
+            }.get(threshold.condition.value.lower(), 'violated')
             
             description = (
                 f"{threshold.metric_type.value.upper()} {condition_text} threshold of {threshold.threshold_value}% "
@@ -215,7 +214,7 @@ class ThresholdMonitor:
             
             # Create alarm payload
             from ..schemas.alarm_schema import AlarmSeverityEnum
-            severity_value = severity_map.get(threshold.severity, 'medium')
+            severity_value = severity_map.get(threshold.severity.value.lower(), 'medium')
             alarm_payload = AlarmCreate(
                 title=f"Threshold Alert: {threshold.name}",
                 description=description,

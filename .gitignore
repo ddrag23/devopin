@@ -38,6 +38,7 @@ coverage.xml
 
 # Logs
 *.log
+logs/
 
 # SQLite or other DBs
 *.sqlite3

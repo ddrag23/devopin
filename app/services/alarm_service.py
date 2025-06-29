@@ -37,7 +37,7 @@ def create_alarm(db: Session, payload: AlarmCreate) -> AlarmResponse:
         alarm = AlarmModel(
             title=payload.title,
             description=payload.description,
-            severity=payload.severity,
+            severity=payload.severity.upper(),
             source=payload.source,
             source_id=payload.source_id,
             triggered_at=payload.triggered_at or datetime.now(timezone.utc),
