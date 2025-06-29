@@ -116,15 +116,16 @@ async def handle_create_threshold():
             ui.button('Cancel', on_click=dialog.close).props('flat')
             
             async def create_action():
+                from ...schemas.threshold_schema import ThresholdTypeEnum,ThresholdSeverityEnum,ThresholdConditionEnum
                 try:
                     payload = ThresholdCreate(
                         name=name_input.value,
                         description=description_input.value or None,
-                        metric_type=metric_select.value,
-                        condition=condition_select.value,
+                        metric_type=ThresholdTypeEnum(metric_select.value),
+                        condition=ThresholdConditionEnum(condition_select.value),
                         threshold_value=float(threshold_input.value),
                         duration_minutes=int(duration_input.value),
-                        severity=severity_select.value,
+                        severity=ThresholdSeverityEnum(severity_select.value),
                         cooldown_minutes=int(cooldown_input.value),
                         source_filter=source_filter_input.value or None,
                         is_enabled=enabled_switch.value
@@ -429,25 +430,25 @@ def update_threshold_table(thresholds):
                         toggle_color = "red" if threshold.is_enabled else "green"
                         ui.button(
                             icon=toggle_icon,
-                            on_click=lambda tid=threshold.id, status=threshold.is_enabled: handle_toggle_threshold(tid, status)
+                            on_click=lambda e, tid=threshold.id, status=threshold.is_enabled: handle_toggle_threshold(tid, status)
                         ).classes(f"text-{toggle_color}-600 hover:bg-{toggle_color}-100 p-1").props("flat dense size=sm").tooltip("Toggle")
                         
                         # Edit button
                         ui.button(
                             icon="edit",
-                            on_click=lambda tid=threshold.id: handle_edit_threshold(tid)
+                            on_click=lambda e, tid=threshold.id: handle_edit_threshold(tid)
                         ).classes("text-blue-600 hover:bg-blue-100 p-1").props("flat dense size=sm").tooltip("Edit")
                         
                         # Duplicate button
                         ui.button(
                             icon="content_copy",
-                            on_click=lambda tid=threshold.id, name=threshold.name: handle_duplicate_threshold(tid, name)
+                            on_click=lambda _, tid=threshold.id, name=threshold.name: handle_duplicate_threshold(tid, name)
                         ).classes("text-purple-600 hover:bg-purple-100 p-1").props("flat dense size=sm").tooltip("Duplicate")
                         
                         # Delete button
                         ui.button(
                             icon="delete",
-                            on_click=lambda tid=threshold.id, name=threshold.name: handle_delete_threshold(tid, name)
+                            on_click=lambda _, tid=threshold.id, name=threshold.name: handle_delete_threshold(tid, name)
                         ).classes("text-red-600 hover:bg-red-100 p-1").props("flat dense size=sm").tooltip("Delete")
 
 def update_threshold_summary(summary):
