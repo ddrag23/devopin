@@ -1,4 +1,4 @@
-from nicegui import ui, app
+from nicegui import ui
 from ..layout import layout
 from ...services.alarm_service import (
     get_pagination_alarms, 
@@ -9,8 +9,6 @@ from ...services.alarm_service import (
 from ...utils.db_context import db_context
 from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
-from fastapi import Request
-from typing import Optional
 
 # Global variables for UI elements
 alarm_table = None

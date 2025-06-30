@@ -1,4 +1,4 @@
-from nicegui import ui, app
+from nicegui import ui
 from ..layout import layout
 from ...services.threshold_service import (
     get_pagination_thresholds,
@@ -20,8 +20,6 @@ from ...schemas.threshold_schema import (
 )
 from ...utils.db_context import db_context
 from fastapi.concurrency import run_in_threadpool
-from datetime import datetime
-from typing import Optional
 
 # Global variables for UI elements
 threshold_table = None
