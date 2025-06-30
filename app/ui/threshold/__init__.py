@@ -35,7 +35,7 @@ def get_metric_icon(metric_type: str) -> str:
     icons = {
         'cpu': 'memory',
         'memory': 'storage',
-        'disk': 'hard_drive'
+        'disk': 'data_usage'
     }
     return icons.get(metric_type.lower(), 'settings')
 
