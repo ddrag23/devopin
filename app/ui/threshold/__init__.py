@@ -42,10 +42,10 @@ def get_metric_icon(metric_type: str) -> str:
 def get_severity_color(severity: str) -> str:
     """Get color based on severity"""
     colors = {
-        'critical': 'red',
-        'high': 'orange',
-        'medium': 'yellow',
-        'low': 'blue'
+        'critical': '#ef4444',  # Red 500
+        'high': '#f59e0b',     # Amber 500
+        'medium': '#f59e0b',   # Amber 500 (was yellow)
+        'low': '#10b981'       # Emerald 500 (was blue)
     }
     return colors.get(severity.lower(), 'gray')
 
@@ -392,7 +392,7 @@ def update_threshold_table(thresholds):
                     # Metric type
                     with ui.element('div').classes("w-20 flex justify-center"):
                         ui.icon(get_metric_icon(threshold.metric_type)).classes(
-                            "text-blue-500"
+                            "text-blue-600"
                         ).tooltip(threshold.metric_type.title())
                     
                     # Name and Description
@@ -411,7 +411,7 @@ def update_threshold_table(thresholds):
                         ui.chip(
                             threshold.severity.title(),
                             color=get_severity_color(threshold.severity)
-                        ).classes("text-xs")
+                        ).classes("text-xs text-white")
                     
                     # Duration
                     with ui.element('div').classes("w-24 text-center"):
@@ -419,25 +419,25 @@ def update_threshold_table(thresholds):
                     
                     # Status
                     with ui.element('div').classes("w-24 flex justify-center"):
-                        status_color = "green" if threshold.is_enabled else "red"
+                        status_color = "#10b981" if threshold.is_enabled else "#ef4444"
                         status_text = "Enabled" if threshold.is_enabled else "Disabled"
-                        ui.chip(status_text, color=status_color).classes("text-xs")
+                        ui.chip(status_text, color=status_color).classes("text-xs text-white")
                     
                     # Actions
                     with ui.row().classes("w-40 justify-center gap-1"):
                         # Toggle button
                         toggle_icon = "toggle_off" if threshold.is_enabled else "toggle_on"
-                        toggle_color = "red" if threshold.is_enabled else "green"
+                        toggle_color_class = "red" if threshold.is_enabled else "emerald"
                         ui.button(
                             icon=toggle_icon,
                             on_click=lambda e, tid=threshold.id, status=threshold.is_enabled: handle_toggle_threshold(tid, status)
-                        ).classes(f"text-{toggle_color}-600 hover:bg-{toggle_color}-100 p-1").props("flat dense size=sm").tooltip("Toggle")
+                        ).classes(f"text-{toggle_color_class}-600 hover:bg-{toggle_color_class}-100 p-1").props("flat dense size=sm").tooltip("Toggle")
                         
                         # Edit button
                         ui.button(
                             icon="edit",
                             on_click=lambda e, tid=threshold.id: handle_edit_threshold(tid)
-                        ).classes("text-blue-600 hover:bg-blue-100 p-1").props("flat dense size=sm").tooltip("Edit")
+                        ).classes("text-blue-500 hover:bg-blue-50 p-1").props("flat dense size=sm").tooltip("Edit")
                         
                         # Duplicate button
                         ui.button(
@@ -465,16 +465,16 @@ def update_threshold_summary(summary):
                     with ui.row().classes("items-center p-4"):
                         ui.icon("settings").classes("text-blue-500 text-2xl mr-3")
                         with ui.column():
-                            ui.label(str(summary.get('total', 0))).classes("text-2xl font-bold text-blue-700")
-                            ui.label("Total Thresholds").classes("text-sm text-blue-600")
+                            ui.label(str(summary.get('total', 0))).classes("text-2xl font-bold text-blue-600")
+                            ui.label("Total Thresholds").classes("text-sm text-blue-500")
                 
                 # Enabled thresholds
-                with ui.card().classes("flex-1 bg-green-50 border-green-200"):
+                with ui.card().classes("flex-1 bg-emerald-50 border-emerald-200"):
                     with ui.row().classes("items-center p-4"):
-                        ui.icon("toggle_on").classes("text-green-500 text-2xl mr-3")
+                        ui.icon("toggle_on").classes("text-emerald-500 text-2xl mr-3")
                         with ui.column():
-                            ui.label(str(summary.get('enabled', 0))).classes("text-2xl font-bold text-green-700")
-                            ui.label("Enabled").classes("text-sm text-green-600")
+                            ui.label(str(summary.get('enabled', 0))).classes("text-2xl font-bold text-emerald-700")
+                            ui.label("Enabled").classes("text-sm text-emerald-600")
                 
                 # CPU thresholds
                 with ui.card().classes("flex-1 bg-purple-50 border-purple-200"):
@@ -544,7 +544,7 @@ async def threshold_page():
                     icon="add",
                     text="New Setting",
                     on_click=handle_create_threshold
-                ).classes("bg-blue-500 text-white")
+                ).classes("bg-blue-600 text-white hover:bg-blue-700")
                 
                 ui.button(
                     icon="refresh",

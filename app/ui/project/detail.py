@@ -26,10 +26,10 @@ filters = {
 def get_log_level_color(level: str) -> str:
     """Get color based on log level"""
     colors = {
-        'DEBUG': 'blue',
-        'INFO': 'green',
-        'WARNING': 'orange',
-        'ERROR': 'red',
+        'DEBUG': '#3b82f6',  # Blue 500
+        'INFO': '#10b981',     # Emerald 500
+        'WARNING': '#f59e0b',  # Amber 500
+        'ERROR': '#ef4444',    # Red 500
         'CRITICAL': 'purple'
     }
     return colors.get(level.upper(), 'gray')
@@ -258,7 +258,7 @@ def detail(id: str):
                     with ui.column().classes('info-item'):
                         ui.label('Alert Status').classes('text-sm font-medium text-gray-600')
                         status_text = 'Enabled' if getattr(project, 'is_alert', False) else 'Disabled'
-                        status_color = 'green' if getattr(project, 'is_alert', False) else 'gray'
+                        status_color = '#10b981' if getattr(project, 'is_alert', False) else 'gray'  # Emerald 500
                         ui.chip(status_text, color=status_color).classes('mt-1')
                 
                 # Description (full width if exists)

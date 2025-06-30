@@ -18,7 +18,7 @@ total_count = 0
 
 def get_status_color(is_alert: bool) -> str:
     """Get color based on alert status"""
-    return 'green' if is_alert else 'gray'
+    return '#10b981' if is_alert else 'gray'  # Emerald 500
 
 def get_status_text(is_alert: bool) -> str:
     """Get text based on alert status"""
@@ -75,7 +75,7 @@ async def handle_create_project():
                             name=name_input.value.strip(),
                             description=description_input.value.strip(),
                             log_path=log_path_input.value.strip(),
-                            framework_type=framework_select.value,
+                            framework_type=str(framework_select.value),
                             is_alert=alert_switch.value
                         )
                         create_project(db, payload)
@@ -135,7 +135,7 @@ async def handle_edit_project(project_id: int):
                             name=name_input.value.strip(),
                             description=description_input.value.strip(),
                             log_path=log_path_input.value.strip(),
-                            framework_type=framework_select.value,
+                            framework_type=str(framework_select.value),
                             is_alert=alert_switch.value
                         )
                         update_project(db, project_id, payload)
@@ -233,26 +233,26 @@ def update_project_table(projects):
                         ui.chip(
                             get_status_text(project["is_alert"]),
                             color=get_status_color(project["is_alert"])
-                        ).classes("text-xs")
+                        ).classes("text-xs text-white")
                     
                     # Actions
                     with ui.row().classes("w-40 justify-center gap-1"):
                         # View details button
                         ui.button(
                             icon="visibility",
-                            on_click=lambda p=project: ui.navigate.to(f"/project/{p['id']}/detail")
-                        ).classes("text-green-600 hover:bg-green-100 p-1").props("flat dense size=sm").tooltip("View Details")
+                            on_click=lambda e,p=project: ui.navigate.to(f"/project/{p['id']}/detail")
+                        ).classes("text-emerald-600 hover:bg-emerald-100 p-1").props("flat dense size=sm").tooltip("View Details")
                         
                         # Edit button
                         ui.button(
                             icon="edit",
-                            on_click=lambda p=project: handle_edit_project(p["id"])
-                        ).classes("text-blue-600 hover:bg-blue-100 p-1").props("flat dense size=sm").tooltip("Edit")
+                            on_click=lambda e,p=project: handle_edit_project(p["id"])
+                        ).classes("text-blue-500 hover:bg-blue-50 p-1").props("flat dense size=sm").tooltip("Edit")
                         
                         # Delete button
                         ui.button(
                             icon="delete",
-                            on_click=lambda p=project: handle_delete_project(p["id"], p["name"])
+                            on_click=lambda e,p=project: handle_delete_project(p["id"], p["name"])
                         ).classes("text-red-600 hover:bg-red-100 p-1").props("flat dense size=sm").tooltip("Delete")
 
 async def handle_search(search_text: str):
@@ -297,7 +297,7 @@ def project():
                     icon="add",
                     text="New Project",
                     on_click=handle_create_project
-                ).classes("bg-blue-500 text-white")
+                ).classes("bg-blue-600 text-white hover:bg-blue-700").props("color=")
                 
                 ui.button(
                     icon="refresh",

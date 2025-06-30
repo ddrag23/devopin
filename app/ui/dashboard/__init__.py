@@ -112,13 +112,13 @@ async def dashboard():
             transition: all 0.3s ease;
         }
         
-        .cpu-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
-        .cpu-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
-        .cpu-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+        .cpu-fill.low { background: linear-gradient(90deg, #10b981, #059669); }
+        .cpu-fill.medium { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .cpu-fill.high { background: linear-gradient(90deg, #ef4444, #dc2626); }
         
-        .memory-fill.low { background: linear-gradient(90deg, #4ecdc4, #44a08d); }
-        .memory-fill.medium { background: linear-gradient(90deg, #feca57, #ff9ff3); }
-        .memory-fill.high { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+        .memory-fill.low { background: linear-gradient(90deg, #10b981, #059669); }
+        .memory-fill.medium { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .memory-fill.high { background: linear-gradient(90deg, #ef4444, #dc2626); }
         
         @keyframes pulse {
             0% { opacity: 1; }
@@ -152,7 +152,7 @@ async def dashboard():
             
             with ui.card().classes('timestamp-card'):
                 with ui.row().classes('items-center'):
-                    ui.html('<div class="status-indicator" style="background: #4ecdc4;"></div>')
+                    ui.html('<div class="status-indicator" style="background: #10b981;"></div>')
                     timestamp_label = ui.label('Loading...').classes('text-sm')
         
         with ui.row().classes('w-full gap-6'):

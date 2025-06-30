@@ -10,5 +10,5 @@ def login_page():
             password = ui.input("Password", password=True).classes("w-full mb-4")
             msg = ui.label('').classes('text-red-500 text-sm')
 
-            ui.button("Login", on_click=lambda: handle_login(email, password, msg)).classes("bg-blue-500 text-white px-4 py-2 rounded")
+            ui.button("Login", on_click=lambda: handle_login(email, password, msg)).classes("bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700")
             ui.link("Don't have an account? Register", "/register")

@@ -38,11 +38,11 @@ def layout():
     
     # Check agent status
     agent_running, agent_status = check_agent_status()
-    
+    ui.colors(primary="#3b82f6")
     with (
         ui.header(elevated=True)
         .style("""
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         backdrop-filter: blur(10px);
     """)
@@ -108,25 +108,25 @@ def layout():
 
     # Left drawer dengan design card-based
     with ui.left_drawer(bottom_corner=True, fixed=False).style("""
-        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-        border-right: 1px solid #e2e8f0;
+        background: #0f172a;
+        border-right: 1px solid #334155;
     """) as left_drawer:
         
         # Agent status card in sidebar (simple)
-        with ui.card().classes("m-2 p-3 bg-white/50 border border-gray-200 w-full"):
+        with ui.card().classes("m-2 p-3 bg-slate-800/50 border border-slate-600 w-full"):
             with ui.row().classes("justify-between items-center gap-2 w-full"):
                 # Status indicator
                 with ui.row().classes("items-center gap-2"):
-                    status_color = "green" if agent_running else "red"
-                    ui.html(f'<div class="w-2 h-2 rounded-full bg-{status_color}-400 animate-pulse"></div>')
-                    ui.label("Devopin Agent:").classes("text-sm font-medium")
-                    with ui.element('div').classes(f"px-2 py-1 rounded-full text-xs font-medium {'bg-green-500 text-white' if agent_running else 'bg-red-500 text-white'}"):
+                    status_class = "emerald" if agent_running else "red"
+                    ui.html(f'<div class="w-2 h-2 rounded-full bg-{status_class}-400 animate-pulse"></div>')
+                    ui.label("Devopin Agent:").classes("text-sm font-medium text-slate-200")
+                    with ui.element('div').classes(f"px-2 py-1 rounded-full text-xs font-medium {'bg-emerald-500 text-white' if agent_running else 'bg-red-500 text-white'}"):
                         ui.label(agent_status)
                 # Quick refresh button
                 ui.button(
                     icon="refresh", 
                     on_click=lambda: ui.navigate.reload()
-                ).classes("text-white/60 hover:text-white/100 p-1").props("flat dense size=sm").tooltip("Refresh Agent Status")
+                ).classes("text-slate-300 hover:text-slate-100 p-1").props("flat dense size=sm").tooltip("Refresh Agent Status")
                     
         
         # Navigation items dengan design simple
@@ -136,17 +136,17 @@ def layout():
                 
                 with ui.row().classes(
                     f"items-center gap-3 p-3 mx-2 rounded-lg w-full cursor-pointer transition-all duration-200 "
-                    f"{'bg-gray-800 text-white shadow-md' if is_active else 'hover:bg-gray-100 text-gray-600'}"
+                    f"{'bg-blue-600 text-white shadow-md' if is_active else 'hover:bg-slate-700 text-slate-300'}"
                 ):
                     ui.icon(item.get("icon", "home"), size="sm").classes(
-                        "text-white" if is_active else "text-gray-600"
+                        "text-white" if is_active else "text-slate-300"
                     )
                     ui.link(
                         item.get("label", "Dashboard"), 
                         item.get("path", "/dashboard")
                     ).classes(
                         f"font-medium no-underline flex-1 "
-                        f"{'text-white' if is_active else 'text-gray-600 hover:text-gray-800'}"
+                        f"{'text-white' if is_active else 'text-slate-300 hover:text-slate-100'}"
                     )
     
     # Update alarm counter periodically

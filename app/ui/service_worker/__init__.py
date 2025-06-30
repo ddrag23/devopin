@@ -16,8 +16,8 @@ total_count = 0
 def get_status_color(status: str) -> str:
     """Get color based on service status"""
     colors = {
-        'active': 'green',
-        'inactive': 'red',
+        'active': '#10b981',   # Emerald 500
+        'inactive': '#ef4444', # Red 500
         'unknown': 'gray'
     }
     return colors.get(status.lower(), 'gray')
@@ -184,7 +184,7 @@ async def show_service_control_dialog(worker: dict):
                 'Restart Service',
                 icon='refresh',
                 on_click=lambda: (handle_service_control('restart', worker), dialog.close())
-            ).classes('w-full').props('color=orange')
+            ).classes('w-full').props('color=amber')
             
             # Enable/disable buttons based on status
             if worker["status"] == "active":
@@ -252,32 +252,32 @@ def update_service_worker_table(workers):
                         ui.chip(
                             worker["status"].title(),
                             color=get_status_color(worker["status"])
-                        ).classes("text-xs")
+                        ).classes("text-xs text-white")
                     
                     # Monitoring
                     with ui.element('div').classes("w-24 flex justify-center"):
-                        monitoring_color = "green" if worker["is_monitoring"] else "gray"
+                        monitoring_color = "#10b981" if worker["is_monitoring"] else "gray"
                         monitoring_text = "Enabled" if worker["is_monitoring"] else "Disabled"
-                        ui.chip(monitoring_text, color=monitoring_color).classes("text-xs")
+                        ui.chip(monitoring_text, color=monitoring_color).classes("text-xs text-white")
                     
                     # Actions
                     with ui.row().classes("w-40 justify-center gap-1"):
                         # Control button
                         ui.button(
                             icon="settings",
-                            on_click=lambda w=worker: show_service_control_dialog(w)
-                        ).classes("text-green-600 hover:bg-green-100 p-1").props("flat dense size=sm").tooltip("Control")
+                            on_click=lambda e,w=worker: show_service_control_dialog(w)
+                        ).classes("text-emerald-600 hover:bg-emerald-100 p-1").props("flat dense size=sm").tooltip("Control")
                         
                         # Edit button
                         ui.button(
                             icon="edit",
-                            on_click=lambda w=worker: handle_edit_service_worker(w["id"])
-                        ).classes("text-blue-600 hover:bg-blue-100 p-1").props("flat dense size=sm").tooltip("Edit")
+                            on_click=lambda e,w=worker: handle_edit_service_worker(w["id"])
+                        ).classes("text-blue-500 hover:bg-blue-50 p-1").props("flat dense size=sm").tooltip("Edit")
                         
                         # Delete button
                         ui.button(
                             icon="delete",
-                            on_click=lambda w=worker: handle_delete_service_worker(w["id"], w["name"])
+                            on_click=lambda e,w=worker: handle_delete_service_worker(w["id"], w["name"])
                         ).classes("text-red-600 hover:bg-red-100 p-1").props("flat dense size=sm").tooltip("Delete")
 
 async def handle_search(search_text: str):
@@ -322,7 +322,7 @@ def service_worker():
                     icon="add",
                     text="New Worker",
                     on_click=handle_create_service_worker
-                ).classes("bg-blue-500 text-white")
+                ).classes("bg-blue-600 text-white hover:bg-blue-700")
                 
                 ui.button(
                     icon="refresh",

@@ -23,9 +23,9 @@ def get_severity_color(severity: str) -> str:
     """Get color based on alarm severity"""
     colors = {
         'critical': 'red',
-        'high': 'orange', 
-        'medium': 'yellow',
-        'low': 'blue'
+        'high': 'amber', 
+        'medium': 'amber',
+        'low': '#3b82f6'  # Blue 500
     }
     return colors.get(severity.lower(), 'gray')
 
@@ -43,8 +43,8 @@ def get_status_color(status: str) -> str:
     """Get color based on alarm status"""
     colors = {
         'active': 'red',
-        'acknowledged': 'orange',
-        'resolved': 'green'
+        'acknowledged': 'amber',
+        'resolved': 'emerald'
     }
     return colors.get(status.lower(), 'gray')
 
@@ -167,7 +167,7 @@ def update_alarm_table(alarms):
                         ui.chip(
                             alarm.status.title(),
                             color=get_status_color(alarm.status)
-                        ).classes("text-xs")
+                        ).classes(f"text-xs {"text-white " if alarm.status != 'resolved' else "text-gray-500"}")
                     
                     # Source
                     with ui.column().classes("w-32"):
@@ -187,22 +187,22 @@ def update_alarm_table(alarms):
                         if alarm.status == 'active':
                             ui.button(
                                 icon="check",
-                                on_click=lambda aid=alarm.id: handle_acknowledge_alarm(aid)
-                            ).classes("text-orange-600 hover:bg-orange-100 p-1").props("flat dense size=sm").tooltip("Acknowledge")
+                                on_click=lambda e,aid=alarm.id: handle_acknowledge_alarm(aid)
+                            ).classes("text-amber-600 hover:bg-amber-100 p-1").props("flat dense size=sm").tooltip("Acknowledge")
                             
                             ui.button(
                                 icon="done_all",
-                                on_click=lambda aid=alarm.id: handle_resolve_alarm(aid)
-                            ).classes("text-green-600 hover:bg-green-100 p-1").props("flat dense size=sm").tooltip("Resolve")
+                                on_click=lambda e,aid=alarm.id: handle_resolve_alarm(aid)
+                            ).classes("text-emerald-600 hover:bg-emerald-100 p-1").props("flat dense size=sm").tooltip("Resolve")
                         
                         elif alarm.status == 'acknowledged':
                             ui.button(
                                 icon="done_all",
-                                on_click=lambda aid=alarm.id: handle_resolve_alarm(aid)
-                            ).classes("text-green-600 hover:bg-green-100 p-1").props("flat dense size=sm").tooltip("Resolve")
+                                on_click=lambda e,aid=alarm.id: handle_resolve_alarm(aid)
+                            ).classes("text-emerald-600 hover:bg-emerald-100 p-1").props("flat dense size=sm").tooltip("Resolve")
                         
                         else:  # resolved
-                            ui.icon("check_circle").classes("text-green-500").tooltip("Resolved")
+                            ui.icon("check_circle").classes("text-emerald-500").tooltip("Resolved")
 
 def update_alarm_summary(summary):
     """Update alarm summary cards"""
@@ -218,8 +218,8 @@ def update_alarm_summary(summary):
                     with ui.row().classes("items-center p-4"):
                         ui.icon("notifications").classes("text-blue-500 text-2xl mr-3")
                         with ui.column():
-                            ui.label(str(summary.get('total', 0))).classes("text-2xl font-bold text-blue-700")
-                            ui.label("Total Alarms").classes("text-sm text-blue-600")
+                            ui.label(str(summary.get('total', 0))).classes("text-2xl font-bold text-blue-600")
+                            ui.label("Total Alarms").classes("text-sm text-blue-500")
                 
                 # Active alarms
                 with ui.card().classes("flex-1 bg-red-50 border-red-200"):
@@ -238,12 +238,12 @@ def update_alarm_summary(summary):
                             ui.label("Critical").classes("text-sm text-purple-600")
                 
                 # Resolved alarms
-                with ui.card().classes("flex-1 bg-green-50 border-green-200"):
+                with ui.card().classes("flex-1 bg-emerald-50 border-emerald-200"):
                     with ui.row().classes("items-center p-4"):
-                        ui.icon("check_circle").classes("text-green-500 text-2xl mr-3")
+                        ui.icon("check_circle").classes("text-emerald-500 text-2xl mr-3")
                         with ui.column():
-                            ui.label(str(summary.get('resolved', 0))).classes("text-2xl font-bold text-green-700")
-                            ui.label("Resolved").classes("text-sm text-green-600")
+                            ui.label(str(summary.get('resolved', 0))).classes("text-2xl font-bold text-emerald-700")
+                            ui.label("Resolved").classes("text-sm text-emerald-600")
 
 async def handle_page_change(page: int):
     """Handle pagination page change"""
