@@ -1,4 +1,4 @@
-from nicegui import ui
+from nicegui import ui, app
 from ...services.project_service import get_project_by_id
 from ...utils.db_context import db_context
 from ..layout import layout
@@ -75,9 +75,14 @@ def refresh_log_data(project):
             end_date = end_date.replace(hour=23, minute=59, second=59)
             query_params['log_time__lte'] = end_date.isoformat()
         print(query_params)
+        # Get user session for timezone conversion
+        user_session = app.storage.user.get("session")
+        user_id = user_session.get('id') if user_session else None
+        
         result = get_pagination_log_project(
             db=db,
             request=None,
+            user_id=user_id,
             query_params=query_params
         )
         

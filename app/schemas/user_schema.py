@@ -6,6 +6,7 @@ from typing import List,Optional
 class UserBase(BaseModel):
     name: str
     email: str
+    user_timezone: Optional[str] = 'UTC'
     
 class UserCreate(UserBase):
     password: str
@@ -15,8 +16,9 @@ class UserCreate(UserBase):
         name: str = Form(...),
         email: str = Form(...),
         password: str = Form(...),
+        user_timezone: str = Form('UTC'),
     ):
-        return cls(name=name,email=email, password=password)
+        return cls(name=name,email=email, password=password, user_timezone=user_timezone)
     
 class User(UserBase):
     id:int

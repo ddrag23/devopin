@@ -1,4 +1,4 @@
-from nicegui import ui
+from nicegui import ui, app
 from ..layout import layout
 from ...services.alarm_service import (
     get_pagination_alarms, 
@@ -96,8 +96,12 @@ async def fetch_alarm_data(page: int = 1, limit: int = 10, search: str = ""):
 
 def _fetch_alarm_data_sync(request):
     """Synchronous function to fetch alarm data"""
+    # Get user session for timezone conversion
+    user_session = app.storage.user.get("session")
+    user_id = user_session.get('id') if user_session else None
+    
     with db_context() as db:
-        return get_pagination_alarms(request, db)
+        return get_pagination_alarms(request, db, user_id)
 
 async def fetch_alarm_summary():
     """Fetch alarm summary statistics"""

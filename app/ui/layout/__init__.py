@@ -3,6 +3,7 @@ from .sidebar_menu import sidebar_menu
 from ...utils.agent_controller import AgentController
 from ...services.alarm_service import get_active_alarms
 from ...utils.db_context import db_context
+from ...models.user import User
 from fastapi.concurrency import run_in_threadpool
 
 def check_agent_status():
@@ -24,9 +25,40 @@ async def get_alarm_count():
 
 def _get_alarm_count_sync():
     """Synchronous function to get alarm count"""
+    # Get user session for timezone (though count doesn't need timezone, 
+    # keeping consistent with other functions)
+    user_session = app.storage.user.get("session")
+    user_id = user_session.get('id') if user_session else None
+    
     with db_context() as db:
-        active_alarms = get_active_alarms(db)
+        active_alarms = get_active_alarms(db, user_id)
         return len(active_alarms)
+
+def get_user_timezone_sync():
+    """Synchronous function to get user timezone"""
+    user_session = app.storage.user.get("session")
+    if not user_session:
+        return 'UTC'
+    
+    user_id = user_session.get('id')
+    if not user_id:
+        return 'UTC'
+    
+    try:
+        with db_context() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user and hasattr(user, 'user_timezone'):
+                return str(user.user_timezone)
+            return 'UTC'
+    except Exception:
+        return 'UTC'
+
+async def get_user_timezone():
+    """Get user timezone"""
+    try:
+        return await run_in_threadpool(get_user_timezone_sync)
+    except Exception:
+        return 'UTC'
 
 
 def layout():
@@ -54,14 +86,19 @@ def layout():
             ui.button(icon="menu", on_click=lambda: left_drawer.toggle()).classes(
                 "text-white hover:bg-white/20 transition-all duration-200 rounded-lg p-2"
             )
-
-        # Logo/Brand dengan typography yang lebih baik
-        with ui.row().classes("items-center gap-2"):
-            ui.icon("code", size="lg").classes("text-white")
-            ui.label("Devopin").classes("text-2xl font-bold text-white tracking-wide")
+            # Logo/Brand dengan typography yang lebih baik
+            with ui.row().classes("items-center gap-2"):
+                ui.label("Devopin").classes("text-2xl font-bold text-white tracking-wide")
+                ui.icon("code", size="lg").classes("text-white")
 
         # Right side: Alarm + User dropdown
         with ui.row().classes("items-center gap-3"):
+            # Timezone indicator (clickable)
+            with ui.row().classes("items-center gap-1 cursor-pointer hover:bg-white/10 rounded px-2 py-1 transition-all duration-200").on('click', lambda: ui.navigate.to('/settings')):
+                ui.icon("schedule", size="sm").classes("text-white/80")
+                timezone_label = ui.label('UTC').classes("text-white/80 text-sm font-medium")
+                timezone_label.tooltip("Current timezone - Click to change in Settings")
+            
             # Alarm Bell Icon with counter
             with ui.element('div').classes('relative'):
                 alarm_button = ui.button(
@@ -95,7 +132,7 @@ def layout():
                 )
                 ui.item(
                     "Settings",
-                    on_click=lambda: ui.notify("Settings clicked", type="info"),
+                    on_click=lambda: ui.navigate.to("/settings"),
                 )
                 ui.separator()
                 ui.item(
@@ -165,8 +202,19 @@ def layout():
         except Exception as e:
             print(f"Error updating alarm counter: {e}")
     
+    # Update timezone indicator
+    async def update_timezone_indicator():
+        try:
+            user_timezone = await get_user_timezone()
+            timezone_label.text = user_timezone
+        except Exception as e:
+            print(f"Error updating timezone indicator: {e}")
+            timezone_label.text = 'UTC'
+    
     # Initial update and periodic updates
     ui.timer(10.0, update_alarm_counter)  # Update every 10 seconds
+    ui.timer(30.0, update_timezone_indicator)  # Update timezone every 30 seconds
     
-    # Run initial update
+    # Run initial updates
     ui.context.client.on_connect(update_alarm_counter)
+    ui.context.client.on_connect(update_timezone_indicator)

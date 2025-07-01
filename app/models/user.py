@@ -9,6 +9,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     name = Column(String,nullable=False)
     password = Column(String,nullable=False)
+    user_timezone = Column(String, default='UTC')
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
