@@ -37,6 +37,19 @@ def get_framework_icon(framework: str) -> str:
     }
     return icons.get(framework.lower(), 'folder')
 
+def get_log_format_info(framework: str) -> str:
+    """Get log format information based on framework type"""
+    formats = {
+        'laravel': '[2023-12-01 10:30:45] production.ERROR: Database connection failed {context}',
+        'python': '2023-12-01 10:30:45 - ERROR - Database connection failed',
+        'django': '2023-12-01 10:30:45 ERROR Database connection failed [views.py:45]',
+        'flask': '2023-12-01 10:30:45 ERROR Database connection failed [app.py:123]',
+        'express': '2023-12-01 10:30:45 error: Database connection failed at UserController (controllers/user.js:45:12)',
+        'spring': '2023-12-01 10:30:45 ERROR c.e.service.UserService - Database connection failed',
+        'fastapi': '2023-12-01 10:30:45 - app.main - ERROR - main.py:67 - Database connection failed'
+    }
+    return formats.get(framework.lower(), 'No specific format defined')
+
 async def handle_create_project():
     """Show create project dialog"""
     frameworks = ["laravel", "python", "django", "flask", "express", "spring", "fastapi"]
@@ -48,14 +61,23 @@ async def handle_create_project():
         description_input = ui.textarea('Description').classes('w-full mb-2').props('outlined')
         log_path_input = ui.input('Log Path').classes('w-full mb-2').props('outlined')
         
-        with ui.row().classes('w-full gap-2 mb-2'):
-            framework_select = ui.select(
-                frameworks,
-                label='Framework Type',
-                value='python'
-            ).classes('flex-1').props('outlined')
-            
-            alert_switch = ui.switch('Enable Alerts', value=False).classes('mt-4')
+        framework_select = ui.select(
+            frameworks,
+            label='Framework Type',
+            value='laravel'
+        ).classes('w-full mb-2').props('outlined')
+        
+        # Log format information section
+        with ui.card().classes('w-full mb-4 bg-blue-50 border border-blue-200'):
+            with ui.column().classes('p-3'):
+                ui.label('Expected Log Format:').classes('text-sm font-semibold text-blue-800 mb-2')
+                log_format_label = ui.label(get_log_format_info('python')).classes('text-xs font-mono text-gray-700 bg-white p-2 rounded border break-all')
+                
+                # Update log format when framework changes
+                def update_log_format():
+                    log_format_label.text = get_log_format_info(framework_select.value or 'laravel')
+                    
+                framework_select.on('update:model-value', lambda: update_log_format())
         
         with ui.row().classes('w-full justify-end gap-2 mt-4'):
             ui.button('Cancel', on_click=dialog.close).props('flat')
@@ -76,7 +98,7 @@ async def handle_create_project():
                             description=description_input.value.strip(),
                             log_path=log_path_input.value.strip(),
                             framework_type=str(framework_select.value),
-                            is_alert=alert_switch.value
+                            is_alert=False
                         )
                         create_project(db, payload)
                         ui.notify("Project created successfully!", type="positive")
@@ -108,14 +130,23 @@ async def handle_edit_project(project_id: int):
         description_input = ui.textarea('Description', value=project_data.description or '').classes('w-full mb-2').props('outlined')
         log_path_input = ui.input('Log Path', value=project_data.log_path).classes('w-full mb-2').props('outlined')
         
-        with ui.row().classes('w-full gap-2 mb-2'):
-            framework_select = ui.select(
-                frameworks,
-                label='Framework Type',
-                value=project_data.framework_type
-            ).classes('flex-1').props('outlined')
-            
-            alert_switch = ui.switch('Enable Alerts', value=getattr(project_data, 'is_alert', False)).classes('mt-4')
+        framework_select = ui.select(
+            frameworks,
+            label='Framework Type',
+            value=project_data.framework_type
+        ).classes('w-full mb-2').props('outlined')
+        
+        # Log format information section
+        with ui.card().classes('w-full mb-4 bg-blue-50 border border-blue-200'):
+            with ui.column().classes('p-3'):
+                ui.label('Expected Log Format:').classes('text-sm font-semibold text-blue-800 mb-2')
+                log_format_label = ui.label(get_log_format_info(project_data.framework_type)).classes('text-xs font-mono text-gray-700 bg-white p-2 rounded border break-all')
+                
+                # Update log format when framework changes
+                def update_log_format():
+                    log_format_label.text = get_log_format_info(framework_select.value or 'laravel')
+                    
+                framework_select.on('update:model-value', lambda: update_log_format())
         
         with ui.row().classes('w-full justify-end gap-2 mt-4'):
             ui.button('Cancel', on_click=dialog.close).props('flat')
@@ -136,7 +167,7 @@ async def handle_edit_project(project_id: int):
                             description=description_input.value.strip(),
                             log_path=log_path_input.value.strip(),
                             framework_type=str(framework_select.value),
-                            is_alert=alert_switch.value
+                            is_alert=False
                         )
                         update_project(db, project_id, payload)
                         ui.notify("Project updated successfully!", type="positive")
@@ -207,7 +238,6 @@ def update_project_table(projects):
                 ui.label("Project").classes("flex-1")
                 ui.label("Framework").classes("w-32 text-center")
                 ui.label("Log Path").classes("w-64")
-                ui.label("Alerts").classes("w-24 text-center")
                 ui.label("Actions").classes("w-40 text-center")
             
             # Table rows
@@ -227,13 +257,6 @@ def update_project_table(projects):
                     # Log Path
                     with ui.element('div').classes("w-64"):
                         ui.label(project["log_path"]).classes("text-sm font-mono text-gray-600")
-                    
-                    # Alerts
-                    with ui.element('div').classes("w-24 flex justify-center"):
-                        ui.chip(
-                            get_status_text(project["is_alert"]),
-                            color=get_status_color(project["is_alert"])
-                        ).classes("text-xs text-white")
                     
                     # Actions
                     with ui.row().classes("w-40 justify-center gap-1"):
