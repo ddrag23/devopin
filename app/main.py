@@ -9,6 +9,8 @@ from app.ui.service_worker import service_worker # type: ignore
 from app.ui.alarm import alarm_page
 from app.ui.threshold import threshold_page
 from app.ui.settings import settings_page
+from app.ui.user import user_management
+from app.ui.profile import profile_page
 from app.api.route import router
 from app.core.logging_config import setup_logging
 

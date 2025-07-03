@@ -128,7 +128,7 @@ def layout():
             ):
                 ui.item(
                     "Profile",
-                    on_click=lambda: ui.notify("Profile clicked", type="info"),
+                    on_click=lambda: ui.navigate.to("/profile"),
                 )
                 ui.item(
                     "Settings",

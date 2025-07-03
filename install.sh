@@ -9,7 +9,7 @@ set -e
 INSTALL_DIR="/opt/devopin-backend"
 SERVICE_USER="devopin"
 SERVICE_NAME="devopin-backend"
-GITHUB_REPO="your-username/devopin-community"
+GITHUB_REPO="ddrag23/devopin-community"
 RELEASE_URL="https://github.com/${GITHUB_REPO}/releases/latest/download"
 SOCKET_PATH="/run/devopin-agent.sock"
 

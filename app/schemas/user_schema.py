@@ -25,6 +25,15 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    user_timezone: Optional[str] = None
+    
+class UserPasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
 class UserResponse(User):
     created_at: datetime
     updated_at: datetime

@@ -20,13 +20,13 @@ sidebar_menu = [
         "label": "Alarms",
     },
     {
+        "path": "/user-management",
+        "icon": "people",
+        "label": "User Management",
+    },
+    {
         "path": "/threshold",
         "icon": "settings",
         "label": "Settings",
     },
-    # {
-    #     "path": "/users",
-    #     "icon": "people",
-    #     "label": "Users",
-    # },
 ]
