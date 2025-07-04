@@ -91,12 +91,12 @@ jobs:
       - name: Generate database with Alembic
         run: |
           # Install alembic if not already installed
-          pip install alembic
-          
+          pip install alembic dotenv
+
           # Create empty database and run migrations
           touch devopin.db
           alembic upgrade head
-          
+
           echo "Database created with proper schema"
           ls -la devopin.db
 
