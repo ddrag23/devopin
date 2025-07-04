@@ -18,9 +18,9 @@ a = Analysis(
     binaries=[],
     datas=[
         # 🎯 Include static files yang dibutuhkan aplikasi
-        ('app/templates', 'templates'),     # Jika ada templates
-        ('app/static', 'static'),           # Jika ada static files
-        ('devopin.db', '.'),                # Include database file
+        #('app/templates', 'templates'),     # Jika ada templates
+        #('app/static', 'static'),           # Jika ada static files
+        #('devopin.db', '.'),                # Include database file
         # ('config.yaml.example', '.'),     # Include config template
     ],
     hiddenimports=[
