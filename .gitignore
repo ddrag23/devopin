@@ -64,4 +64,4 @@ agents/*.pyc
 CLAUDE.md
 
 # Allow essential files for release
-!config.yaml.example
+!.env.example

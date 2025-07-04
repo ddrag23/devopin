@@ -134,10 +134,10 @@ jobs:
             echo "# Empty database file" > release-assets/devopin.db
           fi
 
-          if [ -f "config.yaml.example" ]; then
-            cp config.yaml.example release-assets/
+          if [ -f ".env.example" ]; then
+            cp .env.example release-assets/
           else
-            echo "# Config template" > release-assets/config.yaml.example
+            echo "# Environment variables template" > release-assets/.env.example
           fi
 
           if [ -f "README.md" ]; then
@@ -198,7 +198,7 @@ jobs:
             - `install.sh` - Automated installer script
             - `uninstall.sh` - Uninstaller script
             - `devopin.db` - SQLite database
-            - `config.yaml.example` - Configuration template
+            - `.env.example` - Environment variables template
             - `SHA256SUMS` - File checksums for verification
 
             ### 🌐 After Installation
