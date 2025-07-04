@@ -8,7 +8,7 @@ import os
 # Get dynamic naming dari environment (untuk CI/CD)
 platform = os.environ.get('BUILD_PLATFORM', 'linux')
 arch = os.environ.get('BUILD_ARCH', 'amd64')
-exe_name = f'devopin-backend-{platform}-{arch}'
+exe_name = f'devopin-app-{platform}-{arch}'
 
 block_cipher = None
 

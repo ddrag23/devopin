@@ -51,6 +51,8 @@ jobs:
       # 5. Build executable
       - name: Build executable
         run: |
+          export BUILD_PLATFORM=${{ matrix.platform }}
+          export BUILD_ARCH=${{ matrix.arch }}
           pyinstaller build.spec \
           --clean \
           --noconfirm
@@ -85,8 +87,13 @@ jobs:
         run: |
           mkdir -p release-assets
 
-          # Copy executables
-          find artifacts/ -name "devopin-app-*" -type f -exec cp {} release-assets/ \;
+          # Copy executables (check if artifacts directory exists)
+          if [ -d "artifacts/" ]; then
+            find artifacts/ -name "devopin-app-*" -type f -exec cp {} release-assets/ \;
+          else
+            echo "Warning: artifacts directory not found"
+            ls -la
+          fi
 
           # Copy installer dan assets lainnya
           cp install.sh release-assets/
