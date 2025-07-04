@@ -1,0 +1,163 @@
+name: Build and Release
+
+# Trigger: ketika push tag yang dimulai dengan 'v'
+on:
+  push:
+    tags:
+      - "v*"
+  # Manual trigger (optional)
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Multi-Platform
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - platform: linux
+            arch: amd64
+          - platform: linux
+            arch: arm64
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      # 3. Cache dependencies (optional, speeds up builds)
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # 5. Build executable
+      - name: Build executable
+        run: |
+          pyinstaller build.spec \
+            --name "devopin-app-${{ matrix.platform }}-${{ matrix.arch }}" \
+            --onefile \
+            --clean \
+            --noconfirm
+
+      # 6. Upload artifacts (untuk sharing antar jobs)
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: devopin-app-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/devopin-app-${{ matrix.platform }}-${{ matrix.arch }}
+          retention-days: 1
+
+  # Job terpisah untuk create release
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout untuk ambil file assets
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Download semua build artifacts
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      # 3. Prepare release assets
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # Copy executables
+          find artifacts/ -name "devopin-app-*" -type f -exec cp {} release-assets/ \;
+
+          # Copy installer dan assets lainnya
+          cp install.sh release-assets/
+          cp uninstall.sh release-assets/
+          cp devopin.db release-assets/ 2>/dev/null || touch release-assets/devopin.db
+          cp config.yaml.example release-assets/ 2>/dev/null || echo "# Config template" > release-assets/config.yaml.example
+          cp README.md release-assets/
+
+          # Make scripts executable
+          chmod +x release-assets/install.sh
+          chmod +x release-assets/uninstall.sh
+          chmod +x release-assets/devopin-app-*
+
+          # List files for verification
+          ls -la release-assets/
+
+      # 4. Generate checksums
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cd ..
+
+      # 5. Extract version dari tag
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      # 6. Create GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## 🚀 Devopin Community app ${{ steps.version.outputs.VERSION }}
+
+            ### 📥 Quick Installation
+            ```bash
+            curl -sSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | sudo bash
+            ```
+
+            ### 📋 Manual Installation
+            1. Download the appropriate executable for your platform
+            2. Make it executable: `chmod +x devopin-app-*`
+            3. Run: `./devopin-app-*`
+
+            ### 📦 What's Included
+            - `devopin-app-linux-amd64` - Linux x64 executable
+            - `devopin-app-linux-arm64` - Linux ARM64 executable  
+            - `install.sh` - Automated installer script
+            - `uninstall.sh` - Uninstaller script
+            - `devopin.db` - SQLite database
+            - `config.yaml.example` - Configuration template
+            - `SHA256SUMS` - File checksums for verification
+
+            ### 🌐 After Installation
+            - Web interface: http://localhost:8080
+            - Service management: `sudo systemctl status devopin-app`
+            - View logs: `sudo journalctl -u devopin-app -f`
+
+            ### 📊 Changes
+            - See [commit history](https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.VERSION }}...HEAD) for details
+          files: release-assets/*
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 7. Cleanup artifacts (optional)
+      - name: Cleanup
+        run: rm -rf artifacts/ release-assets/

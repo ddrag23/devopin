@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Devopin Community Backend Installer
+# Devopin Community App Installer
 # Usage: curl -sSL https://your-domain.com/install.sh | bash
 
 set -e
 
 # Configuration
-INSTALL_DIR="/opt/devopin-backend"
+INSTALL_DIR="/opt/devopin-app"
 SERVICE_USER="devopin"
-SERVICE_NAME="devopin-backend"
-GITHUB_REPO="ddrag23/devopin-community"
+SERVICE_NAME="devopin-app"
+GITHUB_REPO="ddrag23/devopin"
 RELEASE_URL="https://github.com/${GITHUB_REPO}/releases/latest/download"
 SOCKET_PATH="/run/devopin-agent.sock"
 
@@ -95,32 +95,29 @@ create_user() {
 install_application() {
     log_info "Creating installation directory: $INSTALL_DIR"
     mkdir -p $INSTALL_DIR
-    mkdir -p $INSTALL_DIR/logs
     cd $INSTALL_DIR
     
-    log_info "Downloading Devopin Backend..."
+    log_info "Downloading Devopin app..."
     
-    # Download executable
-    BINARY_NAME="devopin-backend-${OS}-${ARCH}"
-    wget -q --show-progress "${RELEASE_URL}/${BINARY_NAME}" -O devopin-backend
+    # ✅ Download PRE-COMPILED binary (bukan source code)
+    BINARY_NAME="devopin-app-${OS}-${ARCH}"
+    wget -q --show-progress "${RELEASE_URL}/${BINARY_NAME}" -O devopin-app
     
-    if [[ ! -f "devopin-backend" ]]; then
+    if [[ ! -f "devopin-app" ]]; then
         log_error "Failed to download executable"
         exit 1
     fi
     
+    # ✅ Download database
+    wget -q "${RELEASE_URL}/devopin.db" -O devopin.db
+    
+    # ✅ Download config template
+    wget -q "${RELEASE_URL}/config.yaml.example" -O config.yaml
+    
     # Make executable
-    chmod +x devopin-backend
+    chmod +x devopin-app
     
-    # Download additional files
-    log_info "Downloading configuration files..."
-    wget -q "${RELEASE_URL}/devopin.db" -O devopin.db || touch devopin.db
-    
-    # Create environment file
-    cat > .env << EOF
-DATABASE_URL=sqlite:///./devopin.db
-PYTHONUNBUFFERED=1
-EOF
+    # ✅ TIDAK ada pip install, tidak ada compilation
     
     log_success "Application installed to $INSTALL_DIR"
 }
@@ -131,7 +128,7 @@ install_service() {
     
     cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
-Description=Devopin Community Backend Service
+Description=Devopin Community app Service
 After=network.target
 Wants=network.target
 
@@ -140,7 +137,7 @@ Type=simple
 User=${SERVICE_USER}
 Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=${INSTALL_DIR}/devopin-backend
+ExecStart=${INSTALL_DIR}/devopin-app
 Restart=always
 RestartSec=10
 
@@ -178,7 +175,7 @@ EOF
 
 # Start service
 start_service() {
-    log_info "Starting Devopin Backend service..."
+    log_info "Starting Devopin app service..."
     
     systemctl start ${SERVICE_NAME}
     
@@ -186,7 +183,7 @@ start_service() {
     sleep 3
     
     if systemctl is-active --quiet ${SERVICE_NAME}; then
-        log_success "Devopin Backend is running!"
+        log_success "Devopin app is running!"
         log_info "Service status: systemctl status ${SERVICE_NAME}"
         log_info "View logs: journalctl -u ${SERVICE_NAME} -f"
         log_info "Web interface: http://localhost:8080"
@@ -201,11 +198,11 @@ create_uninstaller() {
     cat > ${INSTALL_DIR}/uninstall.sh << 'EOF'
 #!/bin/bash
 
-SERVICE_NAME="devopin-backend"
-INSTALL_DIR="/opt/devopin-backend"
+SERVICE_NAME="devopin-app"
+INSTALL_DIR="/opt/devopin-app"
 SERVICE_USER="devopin"
 
-echo "Stopping and removing Devopin Backend..."
+echo "Stopping and removing Devopin App..."
 
 # Stop and disable service
 systemctl stop $SERVICE_NAME 2>/dev/null || true
@@ -223,7 +220,7 @@ rm -rf $INSTALL_DIR
 # Remove user
 userdel $SERVICE_USER 2>/dev/null || true
 
-echo "Devopin Backend has been uninstalled."
+echo "Devopin app has been uninstalled."
 EOF
     
     chmod +x ${INSTALL_DIR}/uninstall.sh
@@ -233,7 +230,7 @@ EOF
 # Main installation flow
 main() {
     echo "=================================="
-    echo "  Devopin Community Backend       "
+    echo "  Devopin Community App Installer "
     echo "  Installation Script             "
     echo "=================================="
     echo
