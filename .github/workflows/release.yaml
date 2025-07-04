@@ -59,7 +59,7 @@ jobs:
 
       # 6. Upload artifacts (untuk sharing antar jobs)
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: devopin-app-${{ matrix.platform }}-${{ matrix.arch }}
           path: dist/devopin-app-${{ matrix.platform }}-${{ matrix.arch }}
