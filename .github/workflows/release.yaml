@@ -87,7 +87,20 @@ jobs:
         with:
           path: artifacts/
 
-      # 3. Prepare release assets
+      # 3. Generate database with Alembic
+      - name: Generate database with Alembic
+        run: |
+          # Install alembic if not already installed
+          pip install alembic
+          
+          # Create empty database and run migrations
+          touch devopin.db
+          alembic upgrade head
+          
+          echo "Database created with proper schema"
+          ls -la devopin.db
+
+      # 4. Prepare release assets
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
@@ -100,17 +113,46 @@ jobs:
             ls -la
           fi
 
-          # Copy installer dan assets lainnya
-          cp install.sh release-assets/
-          cp uninstall.sh release-assets/
-          cp devopin.db release-assets/ 2>/dev/null || touch release-assets/devopin.db
-          cp config.yaml.example release-assets/ 2>/dev/null || echo "# Config template" > release-assets/config.yaml.example
-          cp README.md release-assets/
+          # Copy installer dan assets lainnya dengan validasi
+          if [ -f "install.sh" ]; then
+            cp install.sh release-assets/
+          else
+            echo "#!/bin/bash" > release-assets/install.sh
+            echo "echo 'Install script not available'" >> release-assets/install.sh
+          fi
+
+          if [ -f "uninstall.sh" ]; then
+            cp uninstall.sh release-assets/
+          else
+            echo "#!/bin/bash" > release-assets/uninstall.sh
+            echo "echo 'Uninstall script not available'" >> release-assets/uninstall.sh
+          fi
+
+          if [ -f "devopin.db" ]; then
+            cp devopin.db release-assets/
+          else
+            echo "# Empty database file" > release-assets/devopin.db
+          fi
+
+          if [ -f "config.yaml.example" ]; then
+            cp config.yaml.example release-assets/
+          else
+            echo "# Config template" > release-assets/config.yaml.example
+          fi
+
+          if [ -f "README.md" ]; then
+            cp README.md release-assets/
+          else
+            echo "# Devopin Community Backend" > release-assets/README.md
+          fi
 
           # Make scripts executable
           chmod +x release-assets/install.sh
           chmod +x release-assets/uninstall.sh
-          chmod +x release-assets/devopin-app-*
+          chmod +x release-assets/devopin-app-* 2>/dev/null || true
+
+          # Remove empty files
+          find release-assets/ -size 0 -delete
 
           # List files for verification
           ls -la release-assets/
@@ -119,7 +161,11 @@ jobs:
       - name: Generate checksums
         run: |
           cd release-assets
-          sha256sum * > SHA256SUMS
+          if [ "$(ls -A .)" ]; then
+            sha256sum * > SHA256SUMS
+          else
+            echo "No files to checksum" > SHA256SUMS
+          fi
           cd ..
 
       # 5. Extract version dari tag

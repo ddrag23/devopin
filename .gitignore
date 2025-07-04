@@ -62,3 +62,6 @@ agents/*.pyc
 .env
 .nicegui
 CLAUDE.md
+
+# Allow essential files for release
+!config.yaml.example
