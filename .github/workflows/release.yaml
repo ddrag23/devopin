@@ -52,10 +52,8 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller build.spec \
-            --name "devopin-app-${{ matrix.platform }}-${{ matrix.arch }}" \
-            --onefile \
-            --clean \
-            --noconfirm
+          --clean \
+          --noconfirm
 
       # 6. Upload artifacts (untuk sharing antar jobs)
       - name: Upload build artifacts
