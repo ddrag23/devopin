@@ -8,6 +8,11 @@ on:
   # Manual trigger (optional)
   workflow_dispatch:
 
+# Add permissions for GitHub token
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build:
     name: Build Multi-Platform
@@ -124,7 +129,7 @@ jobs:
 
       # 6. Create GitHub Release
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.version.outputs.VERSION }}
           tag_name: ${{ steps.version.outputs.VERSION }}
@@ -160,8 +165,7 @@ jobs:
           files: release-assets/*
           draft: false
           prerelease: ${{ contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'rc') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # 7. Cleanup artifacts (optional)
       - name: Cleanup
