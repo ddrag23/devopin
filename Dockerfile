@@ -42,20 +42,31 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/api/health || exit 1
 
-# Create startup script
+# Create startup script that runs as root first, then switches to devopin
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
 echo "Starting Devopin Community Backend..."\n\
+\n\
+# Run as root to fix permissions\n\
+if [ "$(id -u)" = "0" ]; then\n\
+    echo "Running as root, fixing permissions..."\n\
+    mkdir -p /app/data\n\
+    chown -R devopin:devopin /app/data\n\
+    chmod -R 755 /app/data\n\
+    \n\
+    # Switch to devopin user and re-exec script\n\
+    exec su devopin -c "$0"\n\
+fi\n\
+\n\
+# Now running as devopin user\n\
+echo "Running as user: $(whoami)"\n\
 \n\
 # Ensure .env exists\n\
 if [ ! -f /app/.env ]; then\n\
     echo "Copying .env.example to .env..."\n\
     cp /app/.env.example /app/.env\n\
 fi\n\
-\n\
-# Create database directory if not exists\n\
-mkdir -p /app/data\n\
 \n\
 # Check if database exists and run migrations\n\
 if [ ! -f /app/data/devopin.db ]; then\n\
@@ -74,9 +85,8 @@ echo "Starting application..."\n\
 # Start application\n\
 exec python -m app.main' > /app/start.sh && chmod +x /app/start.sh
 
-# Fix permissions and switch user
+# Fix initial permissions
 RUN chown -R devopin:devopin /app
-USER devopin
 
 # Run the application
 CMD ["/app/start.sh"]
