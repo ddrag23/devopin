@@ -192,8 +192,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}
-            ${{ secrets.DOCKER_USERNAME }}/devopin-community:latest
+            ${{ secrets.DOCKER_USERNAME }}/devopin-app:${{ steps.version.outputs.VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/devopin-app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -208,10 +208,10 @@ jobs:
 
             ### 🐳 Docker Installation (Recommended)
             ```bash
-            docker run -d --name devopin-community \
+            docker run -d --name devopin-app \
               -p 8080:8080 \
               -v $(pwd)/data:/app/data \
-              ${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}
+              ${{ secrets.DOCKER_USERNAME }}/devopin-app:${{ steps.version.outputs.VERSION }}
             ```
 
             ### 📥 Quick Installation
@@ -225,7 +225,7 @@ jobs:
             3. Run: `./devopin-app-*`
 
             ### 📦 What's Included
-            - **Docker Image**: `${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}`
+            - **Docker Image**: `${{ secrets.DOCKER_USERNAME }}/devopin-app:${{ steps.version.outputs.VERSION }}`
             - `devopin-app-linux-amd64` - Linux x64 executable
             - `devopin-app-linux-arm64` - Linux ARM64 executable  
             - `install.sh` - Automated installer script
