@@ -65,3 +65,4 @@ Dockerfile
 # Build scripts
 build-release.sh
 build.spec
+devopin.db

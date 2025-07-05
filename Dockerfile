@@ -26,13 +26,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p logs data
 
-# Copy .env.example to .env if .env doesn't exist
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
+# Always copy .env.example to .env for Docker
+RUN cp .env.example .env
 
 # Create non-root user for security
 RUN groupadd -r devopin && useradd -r -g devopin devopin
-RUN chown -R devopin:devopin /app
-USER devopin
 
 # Create volume for persistent data
 VOLUME ["/app/data"]
@@ -46,15 +44,39 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
-# Create database if not exists\n\
+set -e\n\
+\n\
+echo "Starting Devopin Community Backend..."\n\
+\n\
+# Ensure .env exists\n\
+if [ ! -f /app/.env ]; then\n\
+    echo "Copying .env.example to .env..."\n\
+    cp /app/.env.example /app/.env\n\
+fi\n\
+\n\
+# Create database directory if not exists\n\
+mkdir -p /app/data\n\
+\n\
+# Check if database exists and run migrations\n\
 if [ ! -f /app/data/devopin.db ]; then\n\
-    echo "Creating database..."\n\
+    echo "Creating new database..."\n\
     touch /app/data/devopin.db\n\
+    echo "Running initial migrations..."\n\
+    alembic upgrade head\n\
+else\n\
+    echo "Database exists, running migrations..."\n\
     alembic upgrade head\n\
 fi\n\
 \n\
+echo "Database setup complete!"\n\
+echo "Starting application..."\n\
+\n\
 # Start application\n\
 exec python -m app.main' > /app/start.sh && chmod +x /app/start.sh
+
+# Fix permissions and switch user
+RUN chown -R devopin:devopin /app
+USER devopin
 
 # Run the application
 CMD ["/app/start.sh"]
