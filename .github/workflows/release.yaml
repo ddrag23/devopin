@@ -214,12 +214,15 @@ jobs:
             # Create data directory for SQLite database
             mkdir -p ./devopin-data
             
-            # Run container with persistent volume
+            # Run container with persistent volume and agent socket
             docker run -d --name devopin-app \
               -p 8080:8080 \
               -v $(pwd)/devopin-data:/app/data \
+              -v /run/devopin-agent.sock:/run/devopin-agent.sock \
               ${{ secrets.DOCKER_USERNAME }}/devopin-app:${{ steps.version.outputs.VERSION }}
             ```
+            
+            **Note**: Pastikan `devopin-agent` sudah running di host sebelum start container.
 
             ### 📥 Quick Installation
             ```bash

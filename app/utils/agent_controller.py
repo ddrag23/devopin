@@ -1,18 +1,30 @@
 import os
 import socket
 import json
-# Socket configuration for agent communication
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 def get_socket_path() -> str:
     """Get appropriate socket path for agent communication."""
-    # Production: systemd managed socket
-    prod_socket = "/run/devopin-agent.sock"
-    if os.path.exists(prod_socket):
-        return prod_socket
+    # Read from environment variables first
+    primary_socket = os.getenv('AGENT_SOCKET_PATH', '/run/devopin-agent.sock')
+    fallback_socket = os.getenv('FALLBACK_SOCKET_PATH', '/tmp/devopin-agent.sock')
     
-    # Development/fallback: use /tmp
-    return "/tmp/devopin-agent.sock"
+    # Check if primary socket exists
+    if os.path.exists(primary_socket):
+        return primary_socket
+    
+    # Fallback to secondary socket
+    return fallback_socket
+
+def get_socket_timeout() -> int:
+    """Get socket timeout from environment variables."""
+    return int(os.getenv('AGENT_TIMEOUT', '10'))
 
 SOCKET_PATH = get_socket_path()
+SOCKET_TIMEOUT = get_socket_timeout()
 class AgentController:
     """Handler untuk komunikasi dengan devopin-agent via Unix socket"""
     
@@ -24,7 +36,7 @@ class AgentController:
                 return {"success": False, "message": "Agent socket not found. Is devopin-agent running?"}
             
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.settimeout(10)  # 10 second timeout
+            sock.settimeout(SOCKET_TIMEOUT)  # Use timeout from environment
             
             sock.connect(SOCKET_PATH)
             
@@ -53,7 +65,18 @@ class AgentController:
     @staticmethod
     def get_current_socket_path() -> str:
         """Get current socket path being used"""
-        return get_socket_path()
+        return SOCKET_PATH
+    
+    @staticmethod
+    def get_config_info() -> dict:
+        """Get agent configuration information"""
+        return {
+            "socket_path": SOCKET_PATH,
+            "timeout": SOCKET_TIMEOUT,
+            "primary_socket": os.getenv('AGENT_SOCKET_PATH', '/run/devopin-agent.sock'),
+            "fallback_socket": os.getenv('FALLBACK_SOCKET_PATH', '/tmp/devopin-agent.sock'),
+            "socket_exists": os.path.exists(SOCKET_PATH)
+        }
     
     @staticmethod
     def test_connection() -> dict:

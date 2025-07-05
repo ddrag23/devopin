@@ -8,6 +8,7 @@ from sqlalchemy import pool
 from alembic import context
 from app.core.database import Base
 from app.models import *
+from dotenv import load_dotenv
 
 sys.path.append('./')
 # this is the Alembic Config object, which provides
@@ -15,7 +16,6 @@ sys.path.append('./')
 config = context.config
 
 # Override sqlalchemy.url with environment variable if available
-from dotenv import load_dotenv
 load_dotenv()
 database_url = os.getenv('DATABASE_URL')
 if database_url:
