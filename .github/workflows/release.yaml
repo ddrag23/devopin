@@ -102,7 +102,10 @@ jobs:
       - name: Generate database with Alembic
         run: |
           # Install alembic if not already installed
-          pip install alembic dotenv
+          pip install alembic python-dotenv
+
+          # Set DATABASE_URL for build environment
+          export DATABASE_URL=sqlite:///./devopin.db
 
           # Create empty database and run migrations
           touch devopin.db
