@@ -81,13 +81,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Download semua build artifacts
+      # 2. Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # 4. Download semua build artifacts
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts/
 
-      # 3. Generate database with Alembic
+      # 5. Generate database with Alembic
       - name: Generate database with Alembic
         run: |
           # Install alembic if not already installed
@@ -100,7 +111,7 @@ jobs:
           echo "Database created with proper schema"
           ls -la devopin.db
 
-      # 4. Prepare release assets
+      # 6. Prepare release assets
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
@@ -157,7 +168,7 @@ jobs:
           # List files for verification
           ls -la release-assets/
 
-      # 4. Generate checksums
+      # 7. Generate checksums
       - name: Generate checksums
         run: |
           cd release-assets
@@ -168,12 +179,25 @@ jobs:
           fi
           cd ..
 
-      # 5. Extract version dari tag
+      # 8. Extract version dari tag
       - name: Get version
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      # 6. Create GitHub Release
+      # 9. Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}
+            ${{ secrets.DOCKER_USERNAME }}/devopin-community:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 10. Create GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -181,6 +205,14 @@ jobs:
           tag_name: ${{ steps.version.outputs.VERSION }}
           body: |
             ## 🚀 Devopin Community app ${{ steps.version.outputs.VERSION }}
+
+            ### 🐳 Docker Installation (Recommended)
+            ```bash
+            docker run -d --name devopin-community \
+              -p 8080:8080 \
+              -v $(pwd)/data:/app/data \
+              ${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}
+            ```
 
             ### 📥 Quick Installation
             ```bash
@@ -193,6 +225,7 @@ jobs:
             3. Run: `./devopin-app-*`
 
             ### 📦 What's Included
+            - **Docker Image**: `${{ secrets.DOCKER_USERNAME }}/devopin-community:${{ steps.version.outputs.VERSION }}`
             - `devopin-app-linux-amd64` - Linux x64 executable
             - `devopin-app-linux-arm64` - Linux ARM64 executable  
             - `install.sh` - Automated installer script

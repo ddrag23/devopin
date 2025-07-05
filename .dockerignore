@@ -1,0 +1,67 @@
+# Git files
+.git
+.gitignore
+.github/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test and coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Logs (will be created in container)
+*.log
+logs/
+
+# Development database (will be created in container)
+*.db
+*.sqlite3
+
+# Environment files (we'll copy .env.example)
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Documentation
+README.md
+CLAUDE.md
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Build scripts
+build-release.sh
+build.spec
