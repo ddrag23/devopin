@@ -208,9 +208,13 @@ jobs:
 
             ### 🐳 Docker Installation (Recommended)
             ```bash
+            # Create data directory for SQLite database
+            mkdir -p ./devopin-data
+            
+            # Run container with persistent volume
             docker run -d --name devopin-app \
               -p 8080:8080 \
-              -v $(pwd)/data:/app/data \
+              -v $(pwd)/devopin-data:/app/data \
               ${{ secrets.DOCKER_USERNAME }}/devopin-app:${{ steps.version.outputs.VERSION }}
             ```
 
