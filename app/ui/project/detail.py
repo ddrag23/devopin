@@ -124,7 +124,7 @@ def update_log_table(logs):
                     
                     # Message
                     with ui.column().classes("flex-1"):
-                        ui.label(log.get('message', '')).classes("text-sm")
+                        ui.label(log.get('message', '')).classes("text-sm break-all").style('word-break: break-all; white-space: normal')
                     
                     # Time
                     with ui.element('div').classes("w-48 text-center"):
@@ -257,7 +257,7 @@ def detail(id: str):
                     # Log Path
                     with ui.column().classes('info-item'):
                         ui.label('Log Path').classes('text-sm font-medium text-gray-600')
-                        ui.label(project.log_path).classes('text-lg font-mono')
+                        ui.label(project.log_path).classes('text-lg font-mono break-all').style('word-break: break-all; white-space: normal')
                     
                     # Alert Status
                     with ui.column().classes('info-item'):

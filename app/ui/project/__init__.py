@@ -256,7 +256,7 @@ def update_project_table(projects):
                     
                     # Log Path
                     with ui.element('div').classes("w-64"):
-                        ui.label(project["log_path"]).classes("text-sm font-mono text-gray-600")
+                        ui.label(project["log_path"]).classes("text-sm font-mono text-gray-600 break-words whitespace-normal")
                     
                     # Actions
                     with ui.row().classes("w-40 justify-center gap-1"):
