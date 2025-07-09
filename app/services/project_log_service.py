@@ -8,6 +8,7 @@ from app.schemas.project_log_schema import LogResponse,ProjectLogCreate
 from app.utils.query_adapter import QueryAdapter
 from app.utils.timezone_utils import convert_utc_to_user_timezone, get_user_timezone_from_session, format_datetime_for_user
 from sqlalchemy.exc import IntegrityError
+from typing import List
 
 def get_user_timezone(db: Session, user_id: Optional[int]) -> str:
     """Get user timezone from database, fallback to UTC"""
@@ -90,3 +91,35 @@ def create_project_log(db: Session, payload: ProjectLogCreate) -> LogResponse:
     except IntegrityError:
         db.rollback()
         raise ValueError("Failed create data project")
+
+def create_project_logs_batch(db: Session, payloads: List[ProjectLogCreate]) -> List[LogResponse]:
+    """
+    Batch create project logs for better performance
+    """
+    if not payloads:
+        return []
+    
+    try:
+        # Create all instances first
+        log_instances = []
+        for payload in payloads:
+            log_instance = ProjectLogModel(
+                log_level=payload.log_level,
+                message=payload.message,
+                project_id=payload.project_id,
+                log_time=payload.log_time
+            )
+            log_instances.append(log_instance)
+        
+        # Batch add all instances
+        db.add_all(log_instances)
+        db.flush()  # Flush to get IDs without committing
+        
+        # Convert to response objects
+        results = [LogResponse.model_validate(instance) for instance in log_instances]
+        
+        return results
+        
+    except IntegrityError as e:
+        db.rollback()
+        raise ValueError(f"Failed to create project logs : {str(e)}")

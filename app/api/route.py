@@ -3,7 +3,7 @@ from ..services.project_service import get_all_projects
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..schemas.monitoring_schema import MonitoringData
-from ..services.project_log_service import create_project_log
+from ..services.project_log_service import create_project_logs_batch
 from ..schemas.project_log_schema import ProjectLogCreate
 from ..services.system_metric_service import create_system_metric, get_system_metrics_last_30_days
 from ..schemas.system_metric_schema import SystemMetricCreate
@@ -24,10 +24,48 @@ async def store_monitoring(data : MonitoringData,db:Session=Depends(get_db)):
     
     try:
         # 1. Insert logs
+        all_log_entries = []
         for log_type in data.logs.keys():
-            fw_type,project_id = log_type.split("_")
-            for log in data.logs.get(log_type,[]):
-                create_project_log(db,ProjectLogCreate(log_level=log.level,log_time=log.timestamp,project_id=int(project_id),message=log.message))
+            try:
+                # Split dengan limit untuk handle project_id yang mungkin ada underscore
+                parts = log_type.split("_", 1)
+                if len(parts) != 2:
+                    error_msg = f"Invalid log_type format: {log_type}, expected 'framework_projectid'"
+                    logger.warning(error_msg)
+                    continue
+                
+                fw_type, project_id_str = parts
+                project_id = int(project_id_str)
+                
+                # Process all logs for this log_type
+                logs = data.logs.get(log_type, [])
+                for log in logs:
+                    log_entry = ProjectLogCreate(
+                        log_level=log.level,
+                        log_time=log.timestamp,
+                        project_id=project_id,
+                        message=log.message
+                    )
+                    all_log_entries.append(log_entry)
+                
+                
+                logger.debug(f"Prepared {len(logs)} logs for {log_type} (project_id: {project_id})")
+                
+            except (ValueError, TypeError) as e:
+                error_msg = f"Error processing log_type '{log_type}': {e}"
+                logger.warning(error_msg)
+                continue
+        
+        # Batch insert all logs at once
+        inserted_logs = []
+        if all_log_entries:
+            try:
+                inserted_logs = create_project_logs_batch(db, all_log_entries)
+            except Exception as e:
+                logger.error(f"Failed to batch insert logs: {e}")
+                # Don't fail the entire request, continue with other operations
+        else:
+            logger.info("No valid log entries to insert")
         
         # 2. Insert system metric
         system_metrics_dict = data.system_metrics.model_dump() if hasattr(data.system_metrics, "dict") else dict(data.system_metrics)

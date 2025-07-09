@@ -1,3 +1,4 @@
+import os
 from nicegui import ui, app
 from app.ui.auth.login import login_page
 from app.ui.auth.register import register_page
@@ -24,4 +25,8 @@ def index():
     ui.navigate.to("/login")
 
 
-ui.run(title="User Auth with NiceGUI", reload=True, storage_secret="rashasiiajdlka")
+ui.run(
+    title="User Auth with NiceGUI", 
+    reload=os.getenv("RELOAD", "False").lower() == "true",  # Always disable reload to prevent the feedback loop
+    storage_secret=os.getenv("STORAGE_SECRET", "rashasiiajdlka")
+)
