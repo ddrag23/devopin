@@ -158,6 +158,12 @@ async def handle_service_control(action: str, worker: dict):
 
 async def show_service_control_dialog(worker: dict):
     """Show service control dialog"""
+    
+    async def handle_control_action(action: str):
+        """Handle service control action and close dialog"""
+        dialog.close()
+        await handle_service_control(action, worker)
+    
     with ui.dialog() as dialog, ui.card().classes('w-96'):
         ui.label(f'Control Service: {worker["name"]}').classes('text-lg font-bold mb-4')
         
@@ -171,19 +177,19 @@ async def show_service_control_dialog(worker: dict):
             start_btn = ui.button(
                 'Start Service',
                 icon='play_arrow',
-                on_click=lambda: (handle_service_control('start', worker), dialog.close())
+                on_click=lambda: handle_control_action('start')
             ).classes('w-full')
             
             stop_btn = ui.button(
                 'Stop Service',
                 icon='stop',
-                on_click=lambda: (handle_service_control('stop', worker), dialog.close())
+                on_click=lambda: handle_control_action('stop')
             ).classes('w-full').props('color=red')
             
             restart_btn = ui.button(
                 'Restart Service',
                 icon='refresh',
-                on_click=lambda: (handle_service_control('restart', worker), dialog.close())
+                on_click=lambda: handle_control_action('restart')
             ).classes('w-full').props('color=amber')
             
             # Enable/disable buttons based on status

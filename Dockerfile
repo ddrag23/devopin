@@ -55,6 +55,12 @@ if [ "$(id -u)" = "0" ]; then\n\
     chown -R devopin:devopin /app/data\n\
     chmod -R 755 /app/data\n\
     \n\
+    # Fix socket permissions if exists\n\
+    if [ -S /run/devopin-agent.sock ]; then\n\
+        echo "Fixing socket permissions..."\n\
+        chmod 666 /run/devopin-agent.sock\n\
+    fi\n\
+    \n\
     # Switch to devopin user and re-exec script\n\
     exec su devopin -c "$0"\n\
 fi\n\

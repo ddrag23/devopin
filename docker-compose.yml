@@ -1,8 +1,7 @@
-version: '3.8'
 
 services:
   devopin-app:
-    image: ${DOCKER_USERNAME:-username}/devopin-app:latest
+    build: .
     container_name: devopin-app
     ports:
       - "8080:8080"
@@ -10,16 +9,16 @@ services:
       # Persistent database storage
       - ./devopin-data:/app/data
       # Mount agent socket from host
-      - /run/devopin-agent.sock:/run/devopin-agent.sock
+      - /tmp/:/run/
       # Optional: mount custom .env
       # - ./.env:/app/.env
+    # Fix socket permissions by running as root initially
+    user: "0:0"
     environment:
       - DATABASE_URL=sqlite:////app/data/devopin.db
       - AGENT_SOCKET_PATH=/run/devopin-agent.sock
       - FALLBACK_SOCKET_PATH=/tmp/devopin-agent.sock
     restart: unless-stopped
-    depends_on:
-      - devopin-agent
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
@@ -27,13 +26,6 @@ services:
       retries: 3
       start_period: 40s
 
-  # Optional: Include devopin-agent service jika available sebagai container
-  # devopin-agent:
-  #   image: devopin/agent:latest
-  #   container_name: devopin-agent
-  #   volumes:
-  #     - /run/devopin-agent.sock:/run/devopin-agent.sock
-  #   restart: unless-stopped
 
 volumes:
   devopin-data:
