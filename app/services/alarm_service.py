@@ -210,6 +210,52 @@ def get_alarms_by_source(db: Session, source: str, source_id: Optional[str] = No
     alarms = query.order_by(AlarmModel.triggered_at.desc()).all()
     return [AlarmResponse.model_validate(alarm) for alarm in alarms]
 
+def acknowledge_all_alarms(db: Session, alarm_ids: Optional[List[int]] = None) -> int:
+    """Acknowledge multiple alarms"""
+    try:
+        query = db.query(AlarmModel).filter(AlarmModel.status == AlarmStatus.ACTIVE)
+        
+        # If specific alarm IDs provided, filter by them
+        if alarm_ids:
+            query = query.filter(AlarmModel.id.in_(alarm_ids))
+        
+        # Update all matching alarms
+        updated_count = query.update({
+            'status': AlarmStatus.ACKNOWLEDGED,
+            'acknowledged_at': datetime.now(timezone.utc)
+        }, synchronize_session=False)
+        
+        db.commit()
+        return updated_count
+    except IntegrityError as e:
+        db.rollback()
+        raise ValueError(f"Failed to acknowledge alarms: {str(e)}") from e
+
+def resolve_all_alarms(db: Session, alarm_ids: Optional[List[int]] = None) -> int:
+    """Resolve multiple alarms"""
+    try:
+        # Build query for alarms that can be resolved (active or acknowledged)
+        query = db.query(AlarmModel).filter(
+            AlarmModel.status.in_([AlarmStatus.ACTIVE, AlarmStatus.ACKNOWLEDGED])
+        )
+        
+        # If specific alarm IDs provided, filter by them
+        if alarm_ids:
+            query = query.filter(AlarmModel.id.in_(alarm_ids))
+        
+        # Update all matching alarms
+        updated_count = query.update({
+            'status': AlarmStatus.RESOLVED,
+            'resolved_at': datetime.now(timezone.utc),
+            'is_active': False
+        }, synchronize_session=False)
+        
+        db.commit()
+        return updated_count
+    except IntegrityError as e:
+        db.rollback()
+        raise ValueError(f"Failed to resolve alarms: {str(e)}") from e
+
 def get_alarm_summary(db: Session) -> dict:
     """Get alarm summary statistics"""
     total_alarms = db.query(AlarmModel).count()

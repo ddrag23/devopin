@@ -4,7 +4,9 @@ from ...services.alarm_service import (
     get_pagination_alarms, 
     acknowledge_alarm, 
     resolve_alarm,
-    get_alarm_summary
+    get_alarm_summary,
+    acknowledge_all_alarms,
+    resolve_all_alarms
 )
 from ...utils.db_context import db_context
 from fastapi.concurrency import run_in_threadpool
@@ -16,6 +18,10 @@ alarm_summary_container = None
 current_page = 1
 current_limit = 10
 total_count = 0
+pagination_info = None
+page_label = None
+prev_btn = None
+next_btn = None
 
 def get_severity_color(severity: str) -> str:
     """Get color based on alarm severity"""
@@ -80,6 +86,40 @@ def _resolve_alarm_sync(alarm_id: int):
     with db_context() as db:
         return resolve_alarm(db, alarm_id) is not None
 
+async def handle_acknowledge_all():
+    """Handle acknowledge all alarms action"""
+    try:
+        result = await run_in_threadpool(_acknowledge_all_sync)
+        if result > 0:
+            ui.notify(f"Successfully acknowledged {result} alarms", type="positive")
+            await refresh_alarm_data()
+        else:
+            ui.notify("No active alarms to acknowledge", type="info")
+    except Exception as e:
+        ui.notify(f"Error: {str(e)}", type="negative")
+
+async def handle_resolve_all():
+    """Handle resolve all alarms action"""
+    try:
+        result = await run_in_threadpool(_resolve_all_sync)
+        if result > 0:
+            ui.notify(f"Successfully resolved {result} alarms", type="positive")
+            await refresh_alarm_data()
+        else:
+            ui.notify("No alarms to resolve", type="info")
+    except Exception as e:
+        ui.notify(f"Error: {str(e)}", type="negative")
+
+def _acknowledge_all_sync():
+    """Synchronous function to acknowledge all alarms"""
+    with db_context() as db:
+        return acknowledge_all_alarms(db)
+
+def _resolve_all_sync():
+    """Synchronous function to resolve all alarms"""
+    with db_context() as db:
+        return resolve_all_alarms(db)
+
 async def fetch_alarm_data(page: int = 1, limit: int = 10, search: str = ""):
     """Fetch alarm data with pagination"""
     # Create a mock request object with query parameters
@@ -122,6 +162,9 @@ async def refresh_alarm_data():
     
     # Update alarm table
     update_alarm_table(alarm_data.data)
+    
+    # Update pagination
+    update_pagination_info()
     
     # Update summary
     summary_data = await fetch_alarm_summary()
@@ -206,6 +249,32 @@ def update_alarm_table(alarms):
                         else:  # resolved
                             ui.icon("check_circle").classes("text-emerald-500").tooltip("Resolved")
 
+def update_pagination_info():
+    """Update pagination information display"""
+    global pagination_info, page_label, prev_btn, next_btn, current_page, total_count, current_limit
+    
+    if pagination_info:
+        start_item = (current_page - 1) * current_limit + 1 if total_count > 0 else 0
+        end_item = min(current_page * current_limit, total_count)
+        pagination_info.text = f"Showing {start_item}-{end_item} of {total_count} alarms"
+    
+    if page_label:
+        total_pages = max(1, (total_count + current_limit - 1) // current_limit)
+        page_label.text = f"Page {current_page} of {total_pages}"
+    
+    # Update button states
+    if prev_btn:
+        if current_page <= 1:
+            prev_btn.disable()
+        else:
+            prev_btn.enable()
+    
+    if next_btn:
+        if current_page * current_limit >= total_count:
+            next_btn.disable()
+        else:
+            next_btn.enable()
+
 def update_alarm_summary(summary):
     """Update alarm summary cards"""
     global alarm_summary_container
@@ -247,10 +316,15 @@ def update_alarm_summary(summary):
                             ui.label(str(summary.get('resolved', 0))).classes("text-2xl font-bold text-emerald-700")
                             ui.label("Resolved").classes("text-sm text-emerald-600")
 
-async def handle_page_change(page: int):
-    """Handle pagination page change"""
-    global current_page
-    current_page = page
+async def handle_pagination(direction: int):
+    """Handle pagination navigation"""
+    global current_page, total_count, current_limit
+    
+    if direction == -1 and current_page > 1:
+        current_page -= 1
+    elif direction == 1 and current_page * current_limit < total_count:
+        current_page += 1
+    
     await refresh_alarm_data()
 
 async def handle_search(search_text: str):
@@ -262,7 +336,7 @@ async def handle_search(search_text: str):
 @ui.page("/alarm")
 async def alarm_page():
     """Alarm management page"""
-    global alarm_table, alarm_summary_container, current_page, current_limit, total_count
+    global alarm_table, alarm_summary_container, current_page, current_limit, total_count, pagination_info, page_label, prev_btn, next_btn
     
     ui.add_css('''
         .alarm-container {
@@ -285,6 +359,15 @@ async def alarm_page():
         
         .summary-card:hover {
             transform: translateY(-2px);
+        }
+        
+        .bulk-action-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .bulk-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
     ''')
     
@@ -309,20 +392,50 @@ async def alarm_page():
         # Summary cards
         alarm_summary_container = ui.row().classes("w-full gap-4 mb-6")
         
+        # Bulk Actions
+        with ui.card().classes('w-full mb-4'):
+            with ui.row().classes('p-4 gap-3 items-center'):
+                ui.label('Bulk Actions:').classes('text-lg font-semibold text-gray-700')
+                
+                ui.button(
+                    "Acknowledge All Active",
+                    icon="check",
+                    on_click=handle_acknowledge_all
+                ).classes("bulk-action-btn bg-amber-500 text-white hover:bg-amber-600")
+                
+                ui.button(
+                    "Resolve All",
+                    icon="done_all", 
+                    on_click=handle_resolve_all
+                ).classes("bulk-action-btn bg-emerald-500 text-white hover:bg-emerald-600")
+                
+                ui.label('Note: These actions affect all applicable alarms, not just those on current page.').classes('text-sm text-gray-500 ml-4')
+        
         # Main alarm table
         with ui.card().classes('alarm-card w-full'):
             with ui.column().classes('p-6 w-full'):
                 with ui.row().classes('w-full justify-between items-center mb-4'):
                     ui.label('Alarm List').classes('text-xl font-semibold')
-                    
-                    # Pagination info
-                    pagination_info = ui.label('').classes('text-sm text-gray-600')
                 
                 # Alarm table container
                 alarm_table = ui.column().classes("w-full")
                 
-                # Pagination controls
-                pagination_container = ui.row().classes("w-full justify-center mt-4 gap-2")
+                # Pagination info
+                with ui.row().classes('w-full justify-between items-center mt-4'):
+                    pagination_info = ui.label('Loading...').classes('text-sm text-gray-600')
+                    
+                    with ui.row().classes('gap-2'):
+                        prev_btn = ui.button(
+                            icon='chevron_left',
+                            on_click=lambda: handle_pagination(-1)
+                        ).classes('p-1').props('flat dense').tooltip('Previous Page')
+                        
+                        page_label = ui.label('Page 1').classes('text-sm px-2 py-1')
+                        
+                        next_btn = ui.button(
+                            icon='chevron_right',
+                            on_click=lambda: handle_pagination(1)
+                        ).classes('p-1').props('flat dense').tooltip('Next Page')
     
     # Load initial data
     await refresh_alarm_data()
