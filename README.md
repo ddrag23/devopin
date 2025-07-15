@@ -1,4 +1,4 @@
-# Devopin Community Backend
+# Devopin App
 
 A hybrid monitoring and management application that combines FastAPI REST API with NiceGUI web interface for comprehensive system monitoring and project management.
 
@@ -11,6 +11,56 @@ A hybrid monitoring and management application that combines FastAPI REST API wi
 - **Web Dashboard** - Interactive web interface with real-time charts
 - **User Authentication** - Secure login and registration system
 - **Log Aggregation** - Centralized project log management
+
+## 📸 Screenshots
+
+### Dashboard Overview
+![Dashboard Screenshot](screenshots/dashboard.png)
+
+### Project Management
+![Projects Page](screenshots/projects.png)
+
+### Project Detail & Log
+![Projects Detail](screenshots/project-detail.png)
+![Projects Detail Log](screenshots/project-detail-log.png)
+
+### Service Worker
+![Service Worker Page](screenshots/service-worker.png)
+
+### Alarm
+![Alarm Page](screenshots/alarm.png)
+
+### Setting
+![Setting Page](screenshots/setting-threshold.png)
+
+### User Management
+![User Management Page](screenshots/user-management.png)
+
+
+## 🚀 Quick Install
+
+### One-Line Install (Recommended)
+```bash
+curl -sSL https://raw.githubusercontent.com/ddrag23/devopin/main/install.sh | sudo bash
+```
+
+### Docker Install
+```bash
+# Using Docker directly (quickest)
+docker run -d --name devopin-app \
+  -p 8080:8080 \
+  -v $(pwd)/devopin-data:/app/data \
+  -v /run/devopin-agent/:/run/ \
+  akualwi/devopin-app:latest
+
+# Or using Docker Compose
+git clone https://github.com/ddrag23/devopin
+cd devopin/backend
+docker-compose up -d
+```
+
+### Quick Access
+After installation, open `http://localhost:8080` in your browser to get started!
 
 ## 🏗️ Architecture
 
@@ -42,13 +92,64 @@ app/
 
 ## 🛠️ Installation
 
-### Quick Install (Recommended)
+### Docker Installation (Recommended for Production)
+
+#### Using Docker Compose
+```bash
+# Clone the repository
+git clone https://github.com/ddrag23/devopin.git
+cd devopin/backend
+
+# Start with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the service
+docker-compose down
+```
+
+#### Using Docker CLI
+```bash
+# Pull and run the container
+docker run -d --name devopin-app \
+  -p 8080:8080 \
+  -v $(pwd)/devopin-data:/app/data \
+  -v /run/devopin-agent/:/run/ \
+  akualwi/devopin-app:latest
+
+# View logs
+docker logs -f devopin-app
+
+# Stop the container
+docker stop devopin-app
+docker rm devopin-app
+```
+
+#### Build Your Own Docker Image
+```bash
+# Clone and build
+git clone https://github.com/ddrag23/devopin.git
+cd devopin/backend
+docker build -t devopin-app .
+
+# Run your custom build
+docker run -d \
+  --name devopin-app \
+  -p 8080:8080 \
+  -v devopin-data:/app/data \
+  --restart unless-stopped \
+  devopin-app
+```
+
+### Automated Installation (Linux)
 
 For most users, use the automated installer:
 
 ```bash
 # Download and run installer
-curl -sSL https://your-domain.com/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ddrag23/devopin/main/install.sh | sudo bash
 ```
 
 This will automatically:
@@ -61,20 +162,20 @@ This will automatically:
 ### Manual Installation
 
 #### Prerequisites
-- Linux system (Ubuntu, CentOS, RHEL, etc.)
-- sudo/root access
+- Linux system (Ubuntu, CentOS, RHEL, etc.) or Docker
+- sudo/root access (for native installation)
 
 #### Option 1: Download Release Binary
 1. Download the latest release:
 ```bash
-wget https://github.com/your-username/devopin-community/releases/latest/download/devopin-backend-linux-amd64
-chmod +x devopin-backend-linux-amd64
-sudo mv devopin-backend-linux-amd64 /usr/local/bin/devopin-backend
+wget https://github.com/ddrag23/devopin/releases/latest/download/devopin-app-linux-amd64
+chmod +x devopin-app-linux-amd64
+sudo mv devopin-app-linux-amd64 /usr/local/bin/devopin-app
 ```
 
 2. Run the application:
 ```bash
-devopin-backend
+devopin-app
 ```
 
 #### Option 2: Development Setup
@@ -86,7 +187,7 @@ cd backend
 
 2. Install dependencies:
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 3. Set up environment variables:
@@ -102,26 +203,44 @@ alembic upgrade head
 
 ## 🚀 Running the Application
 
+### Docker (Recommended)
+```bash
+# Using Docker Compose
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Restart
+docker-compose restart
+
+# Stop
+docker-compose down
+```
+
 ### Installed via Installer
 If you used the automated installer, the service is already running:
 ```bash
 # Check status
-sudo systemctl status devopin-backend
+sudo systemctl status devopin-app
 
 # View logs
-sudo journalctl -u devopin-backend -f
+sudo journalctl -u devopin-app -f
 
 # Restart if needed
-sudo systemctl restart devopin-backend
+sudo systemctl restart devopin-app
 ```
 
 ### Manual Execution
 ```bash
 # If installed to /usr/local/bin
-devopin-backend
+devopin-app
 
 # Or run directly
-./devopin-backend-linux-amd64
+./devopin-app-linux-amd64
 ```
 
 ### Development Mode
@@ -138,14 +257,28 @@ The application will be available at `http://localhost:8080`
 
 ## 🗑️ Uninstalling
 
-To completely remove Devopin Backend:
+### Docker Installation
+```bash
+# Stop and remove containers
+docker-compose down
 
+# Remove volumes (this will delete your data!)
+docker-compose down -v
+
+# Remove images
+docker rmi $(docker images devopin-app -q)
+
+# Clean up everything
+docker system prune -f
+```
+
+### Native Installation
 ```bash
 # If installed via installer
-sudo /opt/devopin-backend/uninstall.sh
+sudo /opt/devopin-app/uninstall.sh
 
 # Or download and run uninstaller
-curl -sSL https://your-domain.com/uninstall.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/ddrag23/devopin/main/uninstall.sh | sudo bash
 ```
 
 ## 🔧 Database Management
@@ -171,7 +304,7 @@ alembic revision --autogenerate -m "description"
 
 ## 🔌 Agent Communication
 
-The application communicates with an external `devopin-agent` via Unix socket:
+The application communicates with an external [`devopin-agent`](https://github.com/ddrag23/devopin-agent) via Unix socket:
 
 - **Production socket**: `/run/devopin-agent.sock`
 - **Development socket**: `/tmp/devopin-agent.sock`

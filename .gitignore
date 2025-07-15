@@ -61,7 +61,7 @@ agents/*.pyc
 *.db
 .env
 .nicegui
-CLAUDE.md
+
 
 # Allow essential files for release
 !.env.example
