@@ -7,6 +7,7 @@ class ThresholdType(enum.Enum):
     CPU = "cpu"
     MEMORY = "memory"
     DISK = "disk"
+    SERVICE_WORKER_INACTIVE = "service_worker_inactive"
 
 class ThresholdCondition(enum.Enum):
     GREATER_THAN = "greater_than"

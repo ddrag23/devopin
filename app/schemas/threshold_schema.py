@@ -7,6 +7,7 @@ class ThresholdTypeEnum(str, Enum):
     CPU = "cpu"
     MEMORY = "memory"
     DISK = "disk"
+    SERVICE_WORKER_INACTIVE = "service_worker_inactive"
 
 class ThresholdConditionEnum(str, Enum):
     GREATER_THAN = "greater_than"
@@ -32,9 +33,15 @@ class ThresholdBase(BaseModel):
     
     @field_validator("threshold_value")
     @classmethod
-    def validate_threshold_value(cls, v: float) -> float:
-        if v < 0 or v > 100:
-            raise ValueError("Threshold value must be between 0 and 100")
+    def validate_threshold_value(cls, v: float, info) -> float:
+        # For service worker inactive, threshold_value represents minutes of inactivity
+        if hasattr(info, 'data') and info.data.get('metric_type') == ThresholdTypeEnum.SERVICE_WORKER_INACTIVE:
+            if v < 1 or v > 1440:  # 1 minute to 24 hours
+                raise ValueError("Service worker inactive threshold must be between 1 and 1440 minutes")
+        else:
+            # For CPU, memory, disk - percentage based
+            if v < 0 or v > 100:
+                raise ValueError("Threshold value must be between 0 and 100 for percentage-based metrics")
         return v
     
     @field_validator("duration_minutes")
@@ -68,9 +75,16 @@ class ThresholdUpdate(BaseModel):
     
     @field_validator("threshold_value")
     @classmethod
-    def validate_threshold_value(cls, v: Optional[float]) -> Optional[float]:
-        if v is not None and (v < 0 or v > 100):
-            raise ValueError("Threshold value must be between 0 and 100")
+    def validate_threshold_value(cls, v: Optional[float], info) -> Optional[float]:
+        if v is not None:
+            # For service worker inactive, threshold_value represents minutes of inactivity
+            if hasattr(info, 'data') and info.data.get('metric_type') == ThresholdTypeEnum.SERVICE_WORKER_INACTIVE:
+                if v < 1 or v > 1440:  # 1 minute to 24 hours
+                    raise ValueError("Service worker inactive threshold must be between 1 and 1440 minutes")
+            else:
+                # For CPU, memory, disk - percentage based
+                if v < 0 or v > 100:
+                    raise ValueError("Threshold value must be between 0 and 100 for percentage-based metrics")
         return v
     
     @field_validator("duration_minutes")

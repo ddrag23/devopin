@@ -4,12 +4,14 @@ from datetime import datetime, timezone, timedelta
 from ..models.threshold import Threshold as ThresholdModel, ThresholdType, ThresholdCondition
 from ..models.system_metric import SystemMetric as SystemMetricModel
 from ..models.alarm import Alarm as AlarmModel
+from ..models.service_worker import ServiceWorker as ServiceWorkerModel
 from ..services.threshold_service import get_enabled_thresholds
 from ..services.alarm_service import create_alarm
 from ..schemas.alarm_schema import AlarmCreate
 from ..utils.db_context import db_context
 import json
 from ..core.logging_config import get_logger
+from sqlalchemy import func
 
 logger = get_logger("app.threshold_monitor")
 
@@ -50,11 +52,21 @@ class ThresholdMonitor:
             return created_alarms
     
     def _check_threshold(self, db: Session, threshold) -> Optional[AlarmModel]:
-        """Check a single threshold against recent metrics"""
+        """Check a single threshold against recent metrics or service workers"""
         
         # Check cooldown period to prevent spam alarms
         if not self._is_cooldown_expired(threshold):
             return None
+        
+        # Handle service worker inactive threshold
+        if threshold.metric_type.value.lower() == ThresholdType.SERVICE_WORKER_INACTIVE.value:
+            return self._check_service_worker_threshold(db, threshold)
+        
+        # Handle system metrics thresholds (CPU, memory, disk)
+        return self._check_system_metric_threshold(db, threshold)
+    
+    def _check_system_metric_threshold(self, db: Session, threshold) -> Optional[AlarmModel]:
+        """Check threshold against system metrics (CPU, memory, disk)"""
         
         # Get metrics for the duration period
         duration_minutes = threshold.duration_minutes
@@ -81,6 +93,50 @@ class ThresholdMonitor:
             return alarm
         
         return None
+    
+    def _check_service_worker_threshold(self, db: Session, threshold) -> Optional[AlarmModel]:
+        """Check threshold for service worker inactivity"""
+        
+        inactive_minutes = threshold.threshold_value  # For service workers, this is the inactivity threshold in minutes
+        cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=inactive_minutes)
+        
+        # Query for service workers that haven't been updated since cutoff_time
+        print(cutoff_time)
+        query = db.query(ServiceWorkerModel).filter(
+            ServiceWorkerModel.updated_at < cutoff_time,
+            ServiceWorkerModel.is_monitoring == 1,
+            ServiceWorkerModel.status == 'inactive'  # Only check workers that should be monitored
+        )
+        
+        # Apply source filter if specified (worker name filter)
+        if threshold.source_filter:
+            # Exact match for service worker name
+            query = query.filter(ServiceWorkerModel.name == threshold.source_filter)
+        inactive_workers = query.all()
+        print(f"Query returned {len(inactive_workers)} workers")
+        
+        if not inactive_workers:
+            logger.info(f"No inactive service workers found for threshold {threshold.name}")
+            return None
+        
+        # Create alarm for the first inactive worker found
+        worker = inactive_workers[0]
+        
+        # Calculate how long the worker has been inactive
+        # Ensure worker.updated_at is timezone-aware
+        worker_updated_at = worker.updated_at
+        if worker_updated_at.tzinfo is None:
+            worker_updated_at = worker_updated_at.replace(tzinfo=timezone.utc)
+        
+        inactive_duration = datetime.now(timezone.utc) - worker_updated_at
+        inactive_minutes_actual = int(inactive_duration.total_seconds() / 60)
+        
+        alarm = self._create_service_worker_alarm(db, threshold, worker, inactive_minutes_actual)
+        if alarm:
+            # Update last alarm time
+            self.last_alarm_times[threshold.id] = datetime.now(timezone.utc)
+        
+        return alarm
     
     def _is_cooldown_expired(self, threshold) -> bool:
         """Check if cooldown period has expired for this threshold"""
@@ -235,6 +291,55 @@ class ThresholdMonitor:
             
         except Exception as e:
             logger.error(f"Error creating alarm for threshold {threshold.name}: {str(e)}")
+            return None
+    
+    def _create_service_worker_alarm(self, db: Session, threshold, worker: ServiceWorkerModel, inactive_minutes: int) -> Optional[AlarmModel]:
+        """Create an alarm for service worker inactivity"""
+        
+        try:
+            # Map threshold severity to alarm severity
+            severity_map = {
+                'low': 'low',
+                'medium': 'medium', 
+                'high': 'high',
+                'critical': 'critical'
+            }
+            
+            # Create alarm description
+            # Ensure worker.updated_at is timezone-aware for display
+            worker_updated_at = worker.updated_at
+            if worker_updated_at.tzinfo is None:
+                worker_updated_at = worker_updated_at.replace(tzinfo=timezone.utc)
+            
+            description = (
+                f"Service worker '{worker.name}' has been inactive for {inactive_minutes} minutes, "
+                f"exceeding the threshold of {threshold.threshold_value} minutes. "
+                f"Last activity: {worker_updated_at.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            )
+            
+            # Create alarm payload
+            from ..schemas.alarm_schema import AlarmSeverityEnum
+            severity_value = severity_map.get(threshold.severity.value.lower(), 'medium')
+            alarm_payload = AlarmCreate(
+                title=f"Service Worker Inactive: {worker.name}",
+                description=description,
+                severity=AlarmSeverityEnum(severity_value),
+                source="service_worker_monitor",
+                source_id=str(worker.id),
+                triggered_at=datetime.now(timezone.utc)
+            )
+            
+            # Create the alarm using the alarm service
+            alarm_response = create_alarm(db, alarm_payload)
+            
+            # Return the created alarm model (we need to fetch it again)
+            if alarm_response:
+                return db.query(AlarmModel).filter(AlarmModel.id == alarm_response.id).first()
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error creating service worker alarm for worker {worker.name}: {str(e)}")
             return None
 
 # Global monitor instance

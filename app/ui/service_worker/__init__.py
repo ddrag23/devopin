@@ -6,6 +6,9 @@ from ...services.service_worker_service import (
     create_worker, update_worker, delete_worker, get_all_workers, update_worker_from_agent
 )
 from ...utils.agent_controller import AgentController
+import json
+import threading
+import time
 
 # Global variables for UI elements
 service_worker_table = None
@@ -240,7 +243,7 @@ def update_service_worker_table(workers):
                 ui.label("Description").classes("flex-1")
                 ui.label("Status").classes("w-24 text-center")
                 ui.label("Monitoring").classes("w-24 text-center")
-                ui.label("Actions").classes("w-40 text-center")
+                ui.label("Actions").classes("w-48 text-center")
             
             # Table rows
             for worker in workers:
@@ -267,12 +270,18 @@ def update_service_worker_table(workers):
                         ui.chip(monitoring_text, color=monitoring_color).classes("text-xs text-white")
                     
                     # Actions
-                    with ui.row().classes("w-40 justify-center gap-1"):
+                    with ui.row().classes("w-48 justify-center gap-1"):
                         # Control button
                         ui.button(
                             icon="settings",
                             on_click=lambda e,w=worker: show_service_control_dialog(w)
                         ).classes("text-emerald-600 hover:bg-emerald-100 p-1").props("flat dense size=sm").tooltip("Control")
+                        
+                        # View Logs button
+                        ui.button(
+                            icon="article",
+                            on_click=lambda e,w=worker: ui.navigate.to(f"/service-worker/logs?service={w['name']}")
+                        ).classes("text-purple-600 hover:bg-purple-100 p-1").props("flat dense size=sm").tooltip("View Logs")
                         
                         # Edit button
                         ui.button(

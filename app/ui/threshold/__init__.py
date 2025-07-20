@@ -10,6 +10,7 @@ from ...services.threshold_service import (
     get_threshold_summary,
     duplicate_threshold
 )
+from ...services.service_worker_service import get_all_workers
 from ...schemas.threshold_schema import (
     ThresholdCreate,
     ThresholdUpdate,
@@ -33,7 +34,8 @@ def get_metric_icon(metric_type: str) -> str:
     icons = {
         'cpu': 'memory',
         'memory': 'storage',
-        'disk': 'data_usage'
+        'disk': 'data_usage',
+        'service_worker_inactive': 'work_off'
     }
     return icons.get(metric_type.lower(), 'settings')
 
@@ -93,6 +95,34 @@ async def handle_create_threshold():
                 value=2
             ).classes('flex-1').props('outlined')
         
+        # Update threshold input based on metric type
+        def update_threshold_input():
+            if metric_select.value == 'service_worker_inactive':
+                threshold_input.label = 'Inactive Time (min)'
+                threshold_input.min = 1
+                threshold_input.max = 1440  # 24 hours
+                threshold_input.step = 1
+                threshold_input.value = 5
+                threshold_input.tooltip('Minutes of inactivity before triggering alarm')
+                duration_input.visible = False  # Duration not used for service worker monitoring
+                condition_select.value = 'greater_than'  # Only greater_than makes sense
+                condition_select.set_enabled(False)  # Disable condition selection
+            else:
+                threshold_input.label = 'Threshold (%)'
+                threshold_input.min = 0
+                threshold_input.max = 100
+                threshold_input.step = 0.1
+                threshold_input.value = 85.0
+                threshold_input.tooltip('Percentage threshold for the metric')
+                duration_input.visible = True
+                condition_select.set_enabled(True)  # Enable condition selection
+            threshold_input.update()
+            duration_input.update()
+            condition_select.update()
+        
+        metric_select.on('update:model-value', update_threshold_input)
+        update_threshold_input()  # Initialize
+        
         with ui.row().classes('w-full gap-2 mb-2'):
             severity_select = ui.select(
                 {e.value: e.value.title() for e in ThresholdSeverityEnum},
@@ -107,7 +137,37 @@ async def handle_create_threshold():
                 value=5
             ).classes('flex-1').props('outlined')
         
+        # Source filter - dynamic between input and select based on metric type
         source_filter_input = ui.input('Source Filter (optional)').classes('w-full mb-4').props('outlined')
+        source_filter_select = ui.select(
+            options={},
+            label='Select Service Worker (optional)',
+            with_input=True
+        ).classes('w-full mb-4').props('outlined clearable')
+        source_filter_select.visible = False
+        
+        # Update source filter based on metric type
+        async def update_source_filter():
+            if metric_select.value == 'service_worker_inactive':
+                # Load service workers for dropdown
+                workers = await get_service_workers_for_dropdown()
+                worker_options = {'': 'All Workers'}  # Empty option for all workers
+                worker_options.update({worker.name: worker.name for worker in workers})
+                
+                source_filter_select.options = worker_options
+                source_filter_select.visible = True
+                source_filter_input.visible = False
+                source_filter_select.tooltip('Select specific service worker to monitor')
+            else:
+                source_filter_input.label = 'Source Filter (optional)'
+                source_filter_input.tooltip('Optional filter for metric sources')
+                source_filter_input.visible = True
+                source_filter_select.visible = False
+            source_filter_input.update()
+            source_filter_select.update()
+        
+        metric_select.on('update:model-value', update_source_filter)
+        await update_source_filter()  # Initialize
         enabled_switch = ui.switch('Enabled', value=True).classes('mb-4')
         
         with ui.row().classes('w-full justify-end gap-2'):
@@ -116,6 +176,12 @@ async def handle_create_threshold():
             async def create_action():
                 from ...schemas.threshold_schema import ThresholdTypeEnum,ThresholdSeverityEnum,ThresholdConditionEnum
                 try:
+                    # Get source filter value based on metric type
+                    if metric_select.value == 'service_worker_inactive':
+                        source_filter_value = source_filter_select.value if source_filter_select.value else None
+                    else:
+                        source_filter_value = source_filter_input.value if source_filter_input.value else None
+                    
                     payload = ThresholdCreate(
                         name=name_input.value,
                         description=description_input.value or None,
@@ -125,7 +191,7 @@ async def handle_create_threshold():
                         duration_minutes=int(duration_input.value),
                         severity=ThresholdSeverityEnum(severity_select.value),
                         cooldown_minutes=int(cooldown_input.value),
-                        source_filter=source_filter_input.value or None,
+                        source_filter=source_filter_value,
                         is_enabled=enabled_switch.value
                     )
                     
@@ -200,7 +266,59 @@ async def handle_edit_threshold(threshold_id: int):
                 value=threshold_data.cooldown_minutes
             ).classes('flex-1').props('outlined')
         
+        # Source filter for edit dialog - dynamic between input and select
         source_filter_input = ui.input('Source Filter (optional)', value=threshold_data.source_filter or '').classes('w-full mb-4').props('outlined')
+        source_filter_select = ui.select(
+            options={},
+            label='Select Service Worker (optional)',
+            with_input=True
+        ).classes('w-full mb-4').props('outlined clearable')
+        source_filter_select.visible = False
+        
+        # Update fields based on metric type for edit dialog
+        async def update_edit_fields():
+            if metric_select.value == 'service_worker_inactive':
+                threshold_input.label = 'Inactive Time (min)'
+                threshold_input.min = 1
+                threshold_input.max = 1440
+                threshold_input.step = 1
+                threshold_input.tooltip('Minutes of inactivity before triggering alarm')
+                duration_input.visible = False
+                condition_select.value = 'greater_than'
+                condition_select.set_enabled(False)
+                
+                # Load service workers for dropdown
+                workers = await get_service_workers_for_dropdown()
+                worker_options = {'': 'All Workers'}
+                worker_options.update({worker.name: worker.name for worker in workers})
+                
+                source_filter_select.options = worker_options
+                # Set current value if exists
+                source_filter_select.value = threshold_data.source_filter or ''
+                source_filter_select.visible = True
+                source_filter_input.visible = False
+                source_filter_select.tooltip('Select specific service worker to monitor')
+            else:
+                threshold_input.label = 'Threshold (%)'
+                threshold_input.min = 0
+                threshold_input.max = 100
+                threshold_input.step = 0.1
+                threshold_input.tooltip('Percentage threshold for the metric')
+                duration_input.visible = True
+                condition_select.set_enabled(True)
+                source_filter_input.label = 'Source Filter (optional)'
+                source_filter_input.tooltip('Optional filter for metric sources')
+                source_filter_input.visible = True
+                source_filter_select.visible = False
+            threshold_input.update()
+            duration_input.update()
+            condition_select.update()
+            source_filter_input.update()
+            source_filter_select.update()
+        
+        metric_select.on('update:model-value', update_edit_fields)
+        await update_edit_fields()  # Initialize
+        
         enabled_switch = ui.switch('Enabled', value=threshold_data.is_enabled).classes('mb-4')
         
         with ui.row().classes('w-full justify-end gap-2'):
@@ -208,16 +326,23 @@ async def handle_edit_threshold(threshold_id: int):
             
             async def update_action():
                 try:
+                    # Get source filter value based on metric type
+                    if metric_select.value == 'service_worker_inactive':
+                        source_filter_value = source_filter_select.value if source_filter_select.value else None
+                    else:
+                        source_filter_value = source_filter_input.value if source_filter_input.value else None
+                    
+                    from ...schemas.threshold_schema import ThresholdTypeEnum,ThresholdSeverityEnum,ThresholdConditionEnum
                     payload = ThresholdUpdate(
                         name=name_input.value,
                         description=description_input.value or None,
-                        metric_type=metric_select.value,
-                        condition=condition_select.value,
+                        metric_type=ThresholdTypeEnum(metric_select.value),
+                        condition=ThresholdConditionEnum(condition_select.value),
                         threshold_value=float(threshold_input.value),
                         duration_minutes=int(duration_input.value),
-                        severity=severity_select.value,
+                        severity=ThresholdSeverityEnum(severity_select.value),
                         cooldown_minutes=int(cooldown_input.value),
-                        source_filter=source_filter_input.value or None,
+                        source_filter=source_filter_value,
                         is_enabled=enabled_switch.value
                     )
                     
@@ -349,6 +474,15 @@ def _fetch_threshold_summary_sync():
     with db_context() as db:
         return get_threshold_summary(db)
 
+def _get_service_workers_sync():
+    """Get all service workers for dropdown"""
+    with db_context() as db:
+        return get_all_workers(db)
+
+async def get_service_workers_for_dropdown():
+    """Get service workers for dropdown selection"""
+    return await run_in_threadpool(_get_service_workers_sync)
+
 async def refresh_threshold_data():
     """Refresh threshold table and summary"""
     global current_page, current_limit, total_count
@@ -401,7 +535,10 @@ def update_threshold_table(thresholds):
                     
                     # Condition
                     with ui.element('div').classes("w-32 text-center"):
-                        condition_text = f"{get_condition_text(threshold.condition)} {threshold.threshold_value}%"
+                        if threshold.metric_type.lower() == 'service_worker_inactive':
+                            condition_text = f">= {threshold.threshold_value}min"
+                        else:
+                            condition_text = f"{get_condition_text(threshold.condition)} {threshold.threshold_value}%"
                         ui.label(condition_text).classes("text-sm font-mono")
                     
                     # Severity
@@ -426,27 +563,40 @@ def update_threshold_table(thresholds):
                         # Toggle button
                         toggle_icon = "toggle_off" if threshold.is_enabled else "toggle_on"
                         toggle_color_class = "red" if threshold.is_enabled else "emerald"
+                        
+                        def make_toggle_handler(tid, status):
+                            return lambda: handle_toggle_threshold(tid, status)
+                        
                         ui.button(
                             icon=toggle_icon,
-                            on_click=lambda e, tid=threshold.id, status=threshold.is_enabled: handle_toggle_threshold(tid, status)
+                            on_click=make_toggle_handler(threshold.id, threshold.is_enabled)
                         ).classes(f"text-{toggle_color_class}-600 hover:bg-{toggle_color_class}-100 p-1").props("flat dense size=sm").tooltip("Toggle")
                         
                         # Edit button
+                        def make_edit_handler(tid):
+                            return lambda: handle_edit_threshold(tid)
+                        
                         ui.button(
                             icon="edit",
-                            on_click=lambda e, tid=threshold.id: handle_edit_threshold(tid)
+                            on_click=make_edit_handler(threshold.id)
                         ).classes("text-blue-500 hover:bg-blue-50 p-1").props("flat dense size=sm").tooltip("Edit")
                         
                         # Duplicate button
+                        def make_duplicate_handler(tid, name):
+                            return lambda: handle_duplicate_threshold(tid, name)
+                        
                         ui.button(
                             icon="content_copy",
-                            on_click=lambda _, tid=threshold.id, name=threshold.name: handle_duplicate_threshold(tid, name)
+                            on_click=make_duplicate_handler(threshold.id, threshold.name)
                         ).classes("text-purple-600 hover:bg-purple-100 p-1").props("flat dense size=sm").tooltip("Duplicate")
                         
                         # Delete button
+                        def make_delete_handler(tid, name):
+                            return lambda: handle_delete_threshold(tid, name)
+                        
                         ui.button(
                             icon="delete",
-                            on_click=lambda _, tid=threshold.id, name=threshold.name: handle_delete_threshold(tid, name)
+                            on_click=make_delete_handler(threshold.id, threshold.name)
                         ).classes("text-red-600 hover:bg-red-100 p-1").props("flat dense size=sm").tooltip("Delete")
 
 def update_threshold_summary(summary):
@@ -494,6 +644,7 @@ async def handle_search(search_text: str):
     """Handle search functionality"""
     global current_page
     current_page = 1
+    # You can add search filtering logic here if needed
     await refresh_threshold_data()
 
 @ui.page("/threshold")

@@ -7,6 +7,7 @@ from app.ui.project import project
 from app.ui.error_page import not_found_page
 from app.ui.project.detail import detail
 from app.ui.service_worker import service_worker # type: ignore
+from app.ui.service_worker.logs import service_worker_logs # type: ignore
 from app.ui.alarm import alarm_page
 from app.ui.threshold import threshold_page
 from app.ui.settings import settings_page

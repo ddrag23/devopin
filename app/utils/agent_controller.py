@@ -105,3 +105,63 @@ class AgentController:
     def test_connection() -> dict:
         """Test connection to agent"""
         return AgentController.send_command("status")
+    
+    @staticmethod
+    def send_stream_command(command: str, service_name: str = None, stream_id: str = None) -> dict:
+        """Send streaming command to agent via Unix socket (for logs_stream and logs_stop)"""
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            logger.info(f"Attempting to send stream command: {command}")
+            
+            if not os.path.exists(SOCKET_PATH):
+                return {"success": False, "message": f"Agent socket not found at {SOCKET_PATH}. Is devopin-agent running?"}
+            
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(SOCKET_TIMEOUT)
+            
+            logger.info("Connecting to socket for streaming...")
+            sock.connect(SOCKET_PATH)
+            
+            # Prepare command
+            cmd_data = {
+                "command": command,
+                "service": service_name,
+                "stream_id": stream_id
+            }
+            
+            # Send command
+            message = json.dumps(cmd_data) + "\n"
+            logger.info(f"Sending stream message: {message.strip()}")
+            sock.send(message.encode())
+            
+            # For logs_stream, return socket for streaming
+            if command == "logs_stream":
+                return {"success": True, "socket": sock, "streaming": True}
+            
+            # For logs_stop, get response and close
+            response = sock.recv(1024).decode()
+            logger.info(f"Received response: {response}")
+            sock.close()
+            
+            return json.loads(response)
+            
+        except socket.timeout:
+            return {"success": False, "message": "Command timeout. Agent may be busy."}
+        except ConnectionRefusedError:
+            return {"success": False, "message": "Cannot connect to agent. Is devopin-agent service running?"}
+        except PermissionError as pe:
+            return {"success": False, "message": f"Permission denied accessing socket: {str(pe)}"}
+        except Exception as e:
+            return {"success": False, "message": f"Error communicating with agent: {str(e)}"}
+    
+    @staticmethod
+    def start_log_stream(service_name: str) -> dict:
+        """Start log streaming for a service"""
+        return AgentController.send_stream_command("logs_stream", service_name=service_name)
+    
+    @staticmethod
+    def stop_log_stream(stream_id: str = None) -> dict:
+        """Stop log streaming"""
+        return AgentController.send_stream_command("logs_stop", stream_id=stream_id)
